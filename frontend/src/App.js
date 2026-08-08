@@ -13,6 +13,7 @@ import ProtectedRoute from "./ProtectedRoute/ProtectedRoute";
 import Staff from "./component/Staff";
 import Customers from "./component/Customers";
 import ChangePassword from "./component/ChangePassword";
+import Product from "./component/Product";
 
  
 
@@ -53,6 +54,11 @@ const App = () => {
                     <Route
                         path="/change-password"
                         element={<ChangePassword />}
+                    />
+
+                      <Route
+                        path="/product"
+                        element={<Product />}
                     />
                 </Route>
 
