@@ -4,13 +4,22 @@ const findByUsername = async (username) => {
     const [rows] = await db.query(
         "SELECT id, name, username, password FROM company WHERE username = ?",
         [username]
-    ); 
+    );
     return rows[0] || null;
 };
 
 const findById = async (id) => {
     const [rows] = await db.query(
         "SELECT id, username,password FROM company WHERE id = ?",
+        [id]
+    );
+
+    return rows[0] || null;
+};
+
+const findCompanyById = async (id) => {
+    const [rows] = await db.query(
+        "SELECT id, name, username FROM company WHERE id = ?",
         [id]
     );
 
@@ -35,9 +44,9 @@ const findAll = async () => {
     return rows;
 };
 
-const updatePassword = async(id,password)=>{
+const updatePassword = async (id, password) => {
     const sql = `UPDATE company SET password =? WHERE id=?`;
-    const [result]= await db.query(sql,[password,id]);
+    const [result] = await db.query(sql, [password, id]);
     return result;
 }
 
@@ -45,6 +54,7 @@ const updatePassword = async(id,password)=>{
 module.exports = {
     findByUsername,
     findById,
+    findCompanyById,
     createCompany,
     findAll,
     updatePassword

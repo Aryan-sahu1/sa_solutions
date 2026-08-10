@@ -7,6 +7,7 @@ const productRoutes = require("./routes/product.routes")
 const staffRoutes = require("./routes/staff.routes");
 const customerRoutes =
     require("./routes/customer.routes");
+const errorHandler = require("./middleware/errorHandler");
 app.use(cors());
 app.use(express.json());
 app.get("/", (req, res) => {
@@ -15,8 +16,8 @@ app.get("/", (req, res) => {
 app.use("/api/product", productRoutes)
 app.use("/api/auth", authRoutes)
 app.use("/api/staff", staffRoutes);
-
-
 app.use("/api/customers", customerRoutes);
 
+
+app.use(errorHandler);
 module.exports = app

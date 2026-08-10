@@ -34,17 +34,20 @@ const CompanyLogin = () => {
                 }
             );
 
-            console.log("Login", res.data)
-            setMessage("Login Successfully")
-            console.log("User:", res.data);
             if (res.data.token) {
                 localStorage.setItem("token", res.data.token);
+                await axios.get("http://localhost:4000/api/auth/verify-company", {
+                    headers: {
+                        Authorization: `Bearer ${res.data.token}`,
+                    },
+                });
+
+                setMessage("Login Successfully")
                 navigate("/dashboard");
             }
 
-
-
         } catch (error) {
+            localStorage.removeItem("token");
             console.error("Login Error:", error); setMessage(error.response?.data?.message || "Something went wrong");
         } finally {
             setLoading(false);

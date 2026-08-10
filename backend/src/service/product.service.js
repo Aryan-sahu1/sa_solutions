@@ -5,29 +5,19 @@ const productRepository = require("../repository/product.repository")
 
 
 const create = async (body) => {
-    try {
-        // const productExist = await productRepository.findByUsername(body)
-        // if (companyExist) {
-        //     throw new Error("Username already exists");
-        // }
- 
-
-      
-
         const data = await productRepository.create(body)
         return data;
-    } catch (error) {
-        console.log(error)
-    }
+   
 }
-const findAll = async () => {
-    try {
-        const data =await productRepository.findAll();
-        return data;
-    } catch (error) {
-        console.log(error)
-        return error.message;
-    }
+const findAll = async (page,limit,search) => {
+       page = Number(page) || 1;
+    limit = Number(limit) || 10;
+
+    if (page < 1) page = 1;
+    if (limit < 1) limit = 10;
+        return await productRepository.findAll(page,limit,search);
+     
+     
 }
 
 module.exports = { create, findAll }

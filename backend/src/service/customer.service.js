@@ -19,9 +19,14 @@ const create = async (body) => {
 };
 
 
-const findAll = async () => {
-    const data = await customerRepository.findAll();
+const findAll = async (page, limit, search) => {
+    page = Number(page) || 1;
+    limit = Number(limit) || 10;
 
+    if (page < 1) page = 1;
+    if (limit < 1) limit = 10;
+
+    const data = await customerRepository.findAll(page, limit, search);
     return data;
 };
 
@@ -64,7 +69,6 @@ const remove = async (id) => {
     }
 
     const result = await customerRepository.remove(id);
-
     return result;
 };
 

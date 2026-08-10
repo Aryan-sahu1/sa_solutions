@@ -63,18 +63,9 @@ const Sidebar = () => {
 
             {/* Sidebar — single element, background + transform on same node */}
             <div
-                className="sidebar-container bg-dark text-white d-flex flex-column"
-                style={{
-                    width: "250px",
-                    minHeight: "100vh",
-                    position: "fixed",
-                    left: 0,
-                    top: 0,
-                    bottom: 0,
-                    zIndex: 1040,
-                    transition: "transform 0.3s ease-in-out",
-                    transform: isOpen ? "translateX(0)" : undefined,
-                }}
+                className={`sidebar-container bg-dark text-white d-flex flex-column ${
+                    isOpen ? "sidebar-open" : ""
+                }`}
             >
                 {/* Logo */}
                 <div className="p-4 border-bottom d-none d-md-block">
@@ -82,15 +73,16 @@ const Sidebar = () => {
                 </div>
 
                 {/* Menu */}
-                <div className="p-3 flex-grow-1" style={{ overflowY: "auto" }}>
+                <div className="sidebar-menu p-3 flex-grow-1">
                     {menuItems.map((item) => (
                         <NavLink
                             key={item.to}
                             to={item.to}
+                            end
                             onClick={closeSidebar}
                             className={({ isActive }) =>
-                                `d-flex align-items-center gap-2 text-decoration-none p-3 rounded mb-2 sidebar-link ${
-                                    isActive ? "bg-primary text-white" : "text-white"
+                                `d-flex align-items-center gap-2 text-decoration-none p-3 rounded mb-2 sidebar-link text-white ${
+                                    isActive ? "sidebar-link-active" : ""
                                 }`
                             }
                         >
@@ -112,13 +104,53 @@ const Sidebar = () => {
             </div>
 
             <style>{`
+                :root {
+                    --sidebar-width: 250px;
+                }
+
+                .sidebar-container {
+                    width: var(--sidebar-width);
+                    min-height: 100vh;
+                    position: fixed;
+                    left: 0;
+                    top: 0;
+                    bottom: 0;
+                    z-index: 1040;
+                    transform: translateX(0);
+                    transition: transform 0.3s ease-in-out;
+                }
+
+                .sidebar-link {
+                    min-height: 52px;
+                    transition: background-color 0.2s ease, color 0.2s ease;
+                }
+
+                .sidebar-menu {
+                    margin-top: 0;
+                    overflow-y: auto;
+                }
+
                 .sidebar-link:hover {
                     background-color: rgba(255,255,255,0.1);
                 }
 
+                .sidebar-link-active,
+                .sidebar-link-active:hover {
+                    background-color: #0d6efd;
+                    color: #fff;
+                }
+
                 @media (max-width: 767.98px) {
                     .sidebar-container {
-                        transform: translateX(${isOpen ? "0" : "-100%"});
+                        transform: translateX(-100%);
+                    }
+
+                    .sidebar-container.sidebar-open {
+                        transform: translateX(0);
+                    }
+
+                    .sidebar-menu {
+                        margin-top: 54px;
                     }
                 }
             `}</style>

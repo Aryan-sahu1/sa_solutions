@@ -1,73 +1,162 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
+
+import { DataTable } from "primereact/datatable";
+import { Column } from "primereact/column";
 
 const Product = () => {
     const [products, setProducts] = useState([]);
+
+    // ============================
+    // SEARCH
+    // ============================
+
     const [search, setSearch] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
+
+    // ============================
+    // ADD PRODUCT
+    // ============================
 
     const [productName, setProductName] = useState("");
     const [showForm, setShowForm] = useState(false);
 
+    // ============================
+    // LOADING
+    // ============================
+
     const [loading, setLoading] = useState(false);
     const [listLoading, setListLoading] = useState(false);
+
+    // ============================
+    // MESSAGE
+    // ============================
 
     const [message, setMessage] = useState("");
     const [error, setError] = useState("");
 
-    // =====================================
-    // GET PRODUCT LIST
-    // =====================================
-    const getProducts = async () => {
-        try {
-            setListLoading(true);
-            setError("");
+    // ============================
+    // PAGINATION
+    // ============================
 
-            const response = await axios.get(
-                "http://localhost:4000/api/product/list",
-                {
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                }
-            );
+    const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(5);
+    const [totalRecords, setTotalRecords] = useState(0);
 
-            console.log("Product List:", response.data);
+    // ============================
+    // SEARCH DEBOUNCE
+    // ============================
 
-            if (response.data.status) {
-                setProducts(response.data.data || []);
-            } else {
-                setProducts([]);
-            }
-
-        } catch (error) {
-            console.error("Get product error:", error);
-
-            setError(
-                error.response?.data?.message ||
-                "Failed to fetch products"
-            );
-        } finally {
-            setListLoading(false);
-        }
-    };
-
-    // =====================================
-    // LOAD PRODUCTS WHEN PAGE LOADS
-    // =====================================
     useEffect(() => {
-        getProducts();
-    }, []);
+        const timer = setTimeout(() => {
+            setDebouncedSearch(search.trim());
+            setPage(1);
+        }, 500);
 
-    // =====================================
-    // CREATE PRODUCT
-    // =====================================
+        return () => {
+            clearTimeout(timer);
+        };
+    }, [search]);
+
+    // ============================
+    // GET PRODUCTS
+    // ============================
+
+    const getProducts = useCallback(
+        async (currentPage, currentLimit, currentSearch) => {
+            try {
+                setListLoading(true);
+                setError("");
+const params={
+    page:currentPage,
+    limit:currentLimit
+}
+if(currentSearch !=""){
+    params.search=currentSearch
+}
+console.log(params,"hghrthrhrtrhtth")
+                const response = await axios.get(
+                    "http://localhost:4000/api/product/list",
+                    {
+                        params:params,
+                        headers: {
+                            "Cache-Control": "no-cache",
+                            Pragma: "no-cache",
+                        },
+                    }
+                );
+
+                console.log("PRODUCT API RESPONSE:", response.data);
+
+                if (response.data.status) {
+                    setProducts(response.data.data || []);
+
+                    setTotalRecords(
+                        Number(
+                            response.data.pagination?.total ??
+                            response.data.total ??
+                            0
+                        )
+                    );
+                } else {
+                    setProducts([]);
+                    setTotalRecords(0);
+
+                    setError(
+                        response.data.message ||
+                        "No products found"
+                    );
+                }
+            } catch (err) {
+                console.error(
+                    "Get product error:",
+                    err
+                );
+
+                setProducts([]);
+                setTotalRecords(0);
+
+                setError(
+                    err.response?.data?.message ||
+                    "Failed to fetch products"
+                );
+            } finally {
+                setListLoading(false);
+            }
+        },
+        []
+    );
+
+    // ============================
+    // FETCH PRODUCTS
+    // ============================
+
+    useEffect(() => {
+        getProducts(
+            page,
+            limit,
+            debouncedSearch
+        );
+    }, [
+        page,
+        limit,
+        debouncedSearch,
+        getProducts,
+    ]);
+
+    // ============================
+    // ADD PRODUCT
+    // ============================
+
     const handleAddProduct = async (e) => {
         e.preventDefault();
 
         setMessage("");
         setError("");
 
-        if (!productName.trim()) {
+        const name = productName.trim();
+
+        if (!name) {
             setError("Product name is required");
             return;
         }
@@ -78,18 +167,19 @@ const Product = () => {
             const response = await axios.post(
                 "http://localhost:4000/api/product/create",
                 {
-                    name: productName.trim(),
-                },
-                {
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
+                    name: name,
                 }
             );
 
-            console.log("Create Product:", response.data);
+            console.log(
+                "CREATE PRODUCT RESPONSE:",
+                response.data
+            );
 
-            if (response.data.status || response.data.success) {
+            if (
+                response.data.status ||
+                response.data.success
+            ) {
                 setMessage(
                     response.data.message ||
                     "Product created successfully"
@@ -98,15 +188,29 @@ const Product = () => {
                 setProductName("");
                 setShowForm(false);
 
-                // Refresh product list
-                getProducts();
-            }
+                // Go to first page
+                setPage(1);
 
-        } catch (error) {
-            console.error("Create product error:", error);
+                // Refresh product list
+                await getProducts(
+                    1,
+                    limit,
+                    debouncedSearch
+                );
+            } else {
+                setError(
+                    response.data.message ||
+                    "Failed to create product"
+                );
+            }
+        } catch (err) {
+            console.error(
+                "Create product error:",
+                err
+            );
 
             setError(
-                error.response?.data?.message ||
+                err.response?.data?.message ||
                 "Failed to create product"
             );
         } finally {
@@ -114,19 +218,96 @@ const Product = () => {
         }
     };
 
-    // =====================================
-    // SEARCH
-    // =====================================
-    const filteredProducts = products.filter((product) =>
-        product.name
-            ?.toLowerCase()
-            .includes(search.toLowerCase())
-    );
+    // ============================
+    // PAGINATION
+    // ============================
+
+    const handlePageChange = (event) => {
+        const newPage =
+            Math.floor(
+                event.first / event.rows
+            ) + 1;
+
+        setPage(newPage);
+        setLimit(event.rows);
+    };
+
+    // ============================
+    // DATE TEMPLATE
+    // ============================
+
+    const dateBodyTemplate = (product) => {
+        if (!product.created_at) {
+            return "-";
+        }
+
+        const date = new Date(
+            product.created_at
+        );
+
+        if (isNaN(date.getTime())) {
+            return "-";
+        }
+
+        return date.toLocaleString();
+    };
+
+    // ============================
+    // ACTION TEMPLATE
+    // ============================
+
+    const actionBodyTemplate = (product) => {
+        return (
+            <div>
+                <button
+                    type="button"
+                    className="btn btn-sm btn-outline-primary me-2"
+                    onClick={() => {
+                        console.log(
+                            "Edit:",
+                            product
+                        );
+                    }}
+                >
+                    Edit
+                </button>
+
+                <button
+                    type="button"
+                    className="btn btn-sm btn-outline-danger"
+                    onClick={() => {
+                        console.log(
+                            "Delete:",
+                            product
+                        );
+                    }}
+                >
+                    Delete
+                </button>
+            </div>
+        );
+    };
+
+    // ============================
+    // SERIAL NUMBER
+    // ============================
+
+    const serialNumberTemplate = (
+        product,
+        options
+    ) => {
+        return (
+            (page - 1) * limit +
+            options.rowIndex +
+            1
+        );
+    };
 
     return (
         <div className="container-fluid p-4">
 
             {/* ================= HEADER ================= */}
+
             <div className="d-flex justify-content-between align-items-center mb-4">
 
                 <div>
@@ -140,6 +321,7 @@ const Product = () => {
                 </div>
 
                 <button
+                    type="button"
                     className="btn btn-primary"
                     onClick={() => {
                         setShowForm(!showForm);
@@ -147,12 +329,15 @@ const Product = () => {
                         setError("");
                     }}
                 >
-                    {showForm ? "Close" : "+ Add Product"}
+                    {showForm
+                        ? "Close"
+                        : "+ Add Product"}
                 </button>
 
             </div>
 
             {/* ================= SUCCESS ================= */}
+
             {message && (
                 <div className="alert alert-success">
                     {message}
@@ -160,13 +345,15 @@ const Product = () => {
             )}
 
             {/* ================= ERROR ================= */}
+
             {error && (
                 <div className="alert alert-danger">
                     {error}
                 </div>
             )}
 
-            {/* ================= ADD FORM ================= */}
+            {/* ================= ADD PRODUCT FORM ================= */}
+
             {showForm && (
                 <div className="card shadow-sm border-0 mb-4">
 
@@ -178,7 +365,11 @@ const Product = () => {
 
                     <div className="card-body">
 
-                        <form onSubmit={handleAddProduct}>
+                        <form
+                            onSubmit={
+                                handleAddProduct
+                            }
+                        >
 
                             <div className="row align-items-end">
 
@@ -192,9 +383,13 @@ const Product = () => {
                                         type="text"
                                         className="form-control"
                                         placeholder="Enter product name"
-                                        value={productName}
+                                        value={
+                                            productName
+                                        }
                                         onChange={(e) =>
-                                            setProductName(e.target.value)
+                                            setProductName(
+                                                e.target.value
+                                            )
                                         }
                                     />
 
@@ -205,7 +400,9 @@ const Product = () => {
                                     <button
                                         type="submit"
                                         className="btn btn-success me-2"
-                                        disabled={loading}
+                                        disabled={
+                                            loading
+                                        }
                                     >
                                         {loading
                                             ? "Saving..."
@@ -216,9 +413,15 @@ const Product = () => {
                                         type="button"
                                         className="btn btn-secondary"
                                         onClick={() => {
-                                            setShowForm(false);
-                                            setProductName("");
-                                            setError("");
+                                            setShowForm(
+                                                false
+                                            );
+                                            setProductName(
+                                                ""
+                                            );
+                                            setError(
+                                                ""
+                                            );
                                         }}
                                     >
                                         Cancel
@@ -231,21 +434,26 @@ const Product = () => {
                         </form>
 
                     </div>
+
                 </div>
             )}
 
-            {/* ================= PRODUCT LIST ================= */}
+            {/* ================= PRODUCT TABLE ================= */}
+
             <div className="card shadow-sm border-0">
 
-                {/* Table Header */}
+                {/* ================= TABLE HEADER ================= */}
+
                 <div className="card-header bg-white p-3">
 
                     <div className="row align-items-center">
 
                         <div className="col-md-6">
+
                             <h5 className="mb-0">
                                 Product List
                             </h5>
+
                         </div>
 
                         <div className="col-md-6 mt-3 mt-md-0">
@@ -255,9 +463,11 @@ const Product = () => {
                                 className="form-control"
                                 placeholder="Search product..."
                                 value={search}
-                                onChange={(e) =>
-                                    setSearch(e.target.value)
-                                }
+                                onChange={(e) => {
+                                    setSearch(
+                                        e.target.value
+                                    );
+                                }}
                             />
 
                         </div>
@@ -266,110 +476,108 @@ const Product = () => {
 
                 </div>
 
-                {/* Table */}
-                <div className="table-responsive">
+                {/* ================= TABLE ================= */}
 
-                    <table className="table table-hover mb-0">
+                <div className="card-body">
 
-                        <thead className="table-light">
+                    <DataTable
+                        value={products}
+                        loading={listLoading}
 
-                            <tr>
-                                <th width="80">#</th>
-                                <th>Product Name</th>
-                                <th>Created At</th>
-                                <th width="180">Action</th>
-                            </tr>
+                        lazy
+                        paginator
 
-                        </thead>
+                        first={
+                            (page - 1) * limit
+                        }
 
-                        <tbody>
+                        rows={limit}
 
-                            {listLoading ? (
+                        totalRecords={
+                            totalRecords
+                        }
 
-                                <tr>
-                                    <td
-                                        colSpan="4"
-                                        className="text-center py-5"
-                                    >
-                                        <div
-                                            className="spinner-border text-primary"
-                                            role="status"
-                                        />
+                        rowsPerPageOptions={[
+                            5,
+                            10,
+                            20,
+                            50,
+                        ]}
 
-                                        <div className="mt-2">
-                                            Loading products...
-                                        </div>
-                                    </td>
-                                </tr>
+                        onPage={
+                            handlePageChange
+                        }
 
-                            ) : filteredProducts.length > 0 ? (
+                        responsiveLayout="scroll"
 
-                                filteredProducts.map((product, index) => (
+                        tableStyle={{
+                            minWidth: "50rem",
+                        }}
 
-                                    <tr key={product.id}>
+                        emptyMessage={
+                            debouncedSearch
+                                ? "No products found for this search"
+                                : "No products found"
+                        }
 
-                                        <td>
-                                            {index + 1}
-                                        </td>
+                        paginatorTemplate={
+                            "FirstPageLink " +
+                            "PrevPageLink " +
+                            "PageLinks " +
+                            "NextPageLink " +
+                            "LastPageLink " +
+                            "RowsPerPageDropdown"
+                        }
 
-                                        <td>
-                                            <strong>
-                                                {product.name}
-                                            </strong>
-                                        </td>
+                        currentPageReportTemplate={
+                            "Showing {first} to {last} of {totalRecords} products"
+                        }
 
-                                        <td>
-                                            {product.created_at
-                                                ? new Date(
-                                                    product.created_at
-                                                ).toLocaleString()
-                                                : "-"}
-                                        </td>
+                        showCurrentPageReport
+                    >
 
-                                        <td>
+                        {/* SERIAL NUMBER */}
 
-                                            <button
-                                                className="btn btn-sm btn-outline-primary me-2"
-                                            >
-                                                Edit
-                                            </button>
+                        <Column
+                            header="#"
+                            body={
+                                serialNumberTemplate
+                            }
+                            style={{
+                                width: "80px",
+                            }}
+                        />
 
-                                            <button
-                                                className="btn btn-sm btn-outline-danger"
-                                            >
-                                                Delete
-                                            </button>
+                        {/* PRODUCT NAME */}
 
-                                        </td>
+                        <Column
+                            field="name"
+                            header="Product Name"
+                        />
 
-                                    </tr>
+                        {/* CREATED DATE */}
 
-                                ))
+                        <Column
+                            field="created_at"
+                            header="Created At"
+                            body={
+                                dateBodyTemplate
+                            }
+                        />
 
-                            ) : (
+                        {/* ACTION */}
 
-                                <tr>
+                        <Column
+                            header="Action"
+                            body={
+                                actionBodyTemplate
+                            }
+                            style={{
+                                width: "180px",
+                            }}
+                        />
 
-                                    <td
-                                        colSpan="4"
-                                        className="text-center py-5"
-                                    >
-                                        <h6 className="text-muted">
-                                            No products found
-                                        </h6>
-
-                                        <p className="text-muted mb-0">
-                                            Add your first product.
-                                        </p>
-                                    </td>
-
-                                </tr>
-
-                            )}
-
-                        </tbody>
-
-                    </table>
+                    </DataTable>
 
                 </div>
 

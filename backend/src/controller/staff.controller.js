@@ -1,6 +1,6 @@
 const staffCategoryService = require("../service/staff.service");
 
-const create = async (req, res) => {
+const create = async (req, res,next) => {
     try {
         const result = await staffCategoryService.create(req.body);
 
@@ -11,36 +11,41 @@ const create = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
-
-        return res.status(400).json({
-            status: false,
-            message: error.message
-        });
+       next(error)
     }
 };
 
-const findAll = async (req, res) => {
+const findAll = async (req, res,next) => {
     try {
-        const data = await staffCategoryService.findAll();
+        const { limit, page, search } = req.query;
 
+        const options = {
+            limit: parseInt(limit, 10) || 10,
+            page: parseInt(page, 10) || 1,
+            search: search ? String(search) : ""
+        };
+     
+
+        const result = await staffCategoryService.findAll(options);
+    const totalPages = Math.ceil(result.total / limit);
         return res.status(200).json({
             status: true,
             message: "Staff categories fetched successfully",
-            data
+            data: result.rows,
+            pagination: {
+                total: result.total || 0,
+                page: options.page,
+                limit: options.limit,
+                totalPages:totalPages
+            }
         });
 
     } catch (error) {
-        console.error(error);
-
-        return res.status(500).json({
-            status: false,
-            message: error.message
-        });
+       next(error)
     }
 };
 
-const findById = async (req, res) => {
+const findById = async (req, res,next) => {
     try {
         const { id } = req.params;
 
@@ -53,16 +58,11 @@ const findById = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
-
-        return res.status(404).json({
-            status: false,
-            message: error.message
-        });
+       next(error)
     }
 };
 
-const update = async (req, res) => {
+const update = async (req, res,next) => {
     try {
         const { id } = req.params;
 
@@ -78,16 +78,11 @@ const update = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
-
-        return res.status(400).json({
-            status: false,
-            message: error.message
-        });
+        next(error)
     }
 };
 
-const remove = async (req, res) => {
+const remove = async (req, res,next) => {
     try {
         const { id } = req.params;
 
@@ -100,12 +95,7 @@ const remove = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
-
-        return res.status(404).json({
-            status: false,
-            message: error.message
-        });
+       next(error);
     }
 };
 

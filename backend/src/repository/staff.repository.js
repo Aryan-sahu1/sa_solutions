@@ -14,8 +14,28 @@ const create = async (body) => {
     return result;
 };
 
-const findAll = async () => {
-    const sql = `
+const findAll = async ({ limit = 10, page = 1, search = "" } = {}) => {
+    const offset = (page - 1) * limit;
+
+    let where = `WHERE sc.deleted_at IS NULL`;
+    const params = [];
+
+    if (search && String(search).trim().length) {
+        where += ` AND (sc.name LIKE ? OR p.name LIKE ?)`;
+        const like = `%${search}%`;
+        params.push(like, like);
+    }
+
+    const countSql = `
+        SELECT
+            COUNT(*) AS total
+        FROM staff_categories sc
+        LEFT JOIN products p
+            ON p.id = sc.product_id
+        ${where}
+    `;
+
+    const dataSql = `
         SELECT
             sc.id,
             sc.product_id,
@@ -27,13 +47,22 @@ const findAll = async () => {
         FROM staff_categories sc
         LEFT JOIN products p
             ON p.id = sc.product_id
-        WHERE sc.deleted_at IS NULL
+        ${where}
         ORDER BY sc.id DESC
+        LIMIT ?
+        OFFSET ?
     `;
 
-    const [rows] = await db.query(sql);
+    const countParams = params.slice();
+    const dataParams = params.slice();
+    dataParams.push(limit, offset);
 
-    return rows;
+    const [countResult] = await db.query(countSql, countParams);
+    const [rows] = await db.query(dataSql, dataParams);
+console.log(rows,countResult,"llllll")
+    const total = (countResult && countResult[0] && countResult[0].total) || 0;
+
+    return { rows, total };
 };
 
 const findById = async (id) => {

@@ -2,7 +2,7 @@ const customerService = require("../service/customer.service");
 
 
 // CREATE
-const create = async (req, res) => {
+const create = async (req, res,next) => {
     try {
         const result = await customerService.create(req.body);
 
@@ -13,40 +13,35 @@ const create = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
-
-        return res.status(400).json({
-            status: false,
-            message: error.message
-        });
+       next(error)
     }
 };
 
 
 // GET ALL
-const findAll = async (req, res) => {
+const findAll = async (req, res,next) => {
     try {
-        const data = await customerService.findAll();
+        const page = Number(req.query.page) || 1;
+        const limit = Number(req.query.limit) || 10;
+        const search = req.query.search || "";
+
+        const data = await customerService.findAll(page, limit, search);
 
         return res.status(200).json({
             status: true,
             message: "Customers fetched successfully",
-            data
+            data: data.data,
+            pagination: data.pagination
         });
 
     } catch (error) {
-        console.error(error);
-
-        return res.status(500).json({
-            status: false,
-            message: error.message
-        });
+        next(error);
     }
 };
 
 
 // GET BY ID
-const findById = async (req, res) => {
+const findById = async (req, res,next) => {
     try {
         const { id } = req.params;
 
@@ -59,18 +54,13 @@ const findById = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
-
-        return res.status(404).json({
-            status: false,
-            message: error.message
-        });
+        next(error);
     }
 };
 
 
 // UPDATE
-const update = async (req, res) => {
+const update = async (req, res,next) => {
     try {
         const { id } = req.params;
 
@@ -86,18 +76,13 @@ const update = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
-
-        return res.status(400).json({
-            status: false,
-            message: error.message
-        });
+        next(error);
     }
 };
 
 
 // DELETE
-const remove = async (req, res) => {
+const remove = async (req, res,next) => {
     try {
         const { id } = req.params;
 
@@ -110,12 +95,7 @@ const remove = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
-
-        return res.status(404).json({
-            status: false,
-            message: error.message
-        });
+       next(error)
     }
 };
 

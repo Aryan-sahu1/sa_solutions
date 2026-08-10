@@ -1,6 +1,7 @@
 const { verifyToken } = require("../utils/jwt");
+const authRepository = require("../repository/auth.repository");
 
-const authenticateToken = (req, res, next) => {
+const authenticateToken = async (req, res, next) => {
 
     try {
 
@@ -24,9 +25,18 @@ const authenticateToken = (req, res, next) => {
         }
 
         const decoded = verifyToken(token);
+        const company = await authRepository.findCompanyById(decoded.id);
+
+        if (!company) {
+            return res.status(401).json({
+                status: false,
+                message: "Company does not exist",
+            });
+        }
 
         // Store logged-in user
         req.user = decoded;
+        req.company = company;
 
         next();
 

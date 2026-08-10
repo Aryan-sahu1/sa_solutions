@@ -10,22 +10,37 @@ const create = async (body) => {
     return result;
 };
 
-const findAll = async () => {
-    const rows = await staffCategoryRepository.findAll();
+const findAll = async (options = {}) => {
+    const result = await staffCategoryRepository.findAll(options);
 
-    return rows.map((item) => ({
+    let rows = [];
+    let total = 0;
+
+    if (Array.isArray(result)) {
+        rows = result;
+        total = rows.length;
+    } else if (result && Array.isArray(result.rows)) {
+        rows = result.rows;
+        total = result.total || rows.length;
+    }
+
+    const mapped = rows.map((item) => ({
         id: item.id,
-
         product: {
             id: item.product_id,
             name: item.product_name
         },
-
         name: item.name,
         created_at: item.created_at,
         updated_at: item.updated_at,
         deleted_at: item.deleted_at
     }));
+
+    if (!options || Object.keys(options).length === 0) {
+        return mapped;
+    }
+
+    return { rows: mapped, total };
 };
 
 const findById = async (id) => {

@@ -1,11 +1,15 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import axios from "axios";
+
+import { DataTable } from "primereact/datatable";
+import { Column } from "primereact/column";
 
 const Customers = () => {
     const [customers, setCustomers] = useState([]);
     const [products, setProducts] = useState([]);
 
     const [search, setSearch] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
     const [showForm, setShowForm] = useState(false);
 
     const [editId, setEditId] = useState(null);
@@ -15,6 +19,10 @@ const Customers = () => {
 
     const [message, setMessage] = useState("");
     const [error, setError] = useState("");
+
+    const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(5);
+    const [totalRecords, setTotalRecords] = useState(0);
 
     const [formData, setFormData] = useState({
         name: "",
@@ -35,37 +43,87 @@ const Customers = () => {
     });
 
     // ==========================================
+    // SEARCH DEBOUNCE
+    // ==========================================
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(search.trim());
+            setPage(1);
+        }, 500);
+
+        return () => {
+            clearTimeout(timer);
+        };
+    }, [search]);
+
+    // ==========================================
     // GET CUSTOMERS
     // ==========================================
 
-    const getCustomers = async () => {
-        try {
-            setListLoading(true);
-            setError("");
+    const getCustomers = useCallback(
+        async (currentPage, currentLimit, currentSearch) => {
+            try {
+                setListLoading(true);
+                setError("");
 
-            const response = await axios.get(
-                "http://localhost:4000/api/customers"
-            );
+                const params = {
+                    page: currentPage,
+                    limit: currentLimit,
+                };
 
-            console.log("Customers:", response.data);
+                if (currentSearch !== "") {
+                    params.search = currentSearch;
+                }
 
-            if (response.data.status) {
-                setCustomers(response.data.data || []);
-            } else {
+                const response = await axios.get(
+                    "http://localhost:4000/api/customers",
+                    {
+                        params,
+                        headers: {
+                            "Cache-Control": "no-cache",
+                            Pragma: "no-cache",
+                        },
+                    }
+                );
+
+                console.log("Customers:", response.data);
+
+                if (response.data.status) {
+                    const customerRows = (response.data.data || []).map(
+                        (customer) => ({
+                            ...customer,
+                            product_id:
+                                customer.product_id ||
+                                customer.product?.id ||
+                                "",
+                        })
+                    );
+
+                    setCustomers(customerRows);
+                    setTotalRecords(
+                        Number(response.data.pagination?.total || 0)
+                    );
+                } else {
+                    setCustomers([]);
+                    setTotalRecords(0);
+                }
+
+            } catch (error) {
+                console.error("Customer list error:", error);
+
                 setCustomers([]);
+                setTotalRecords(0);
+                setError(
+                    error.response?.data?.message ||
+                    "Failed to fetch customers"
+                );
+            } finally {
+                setListLoading(false);
             }
-
-        } catch (error) {
-            console.error("Customer list error:", error);
-
-            setError(
-                error.response?.data?.message ||
-                "Failed to fetch customers"
-            );
-        } finally {
-            setListLoading(false);
-        }
-    };
+        },
+        []
+    );
 
     // ==========================================
     // GET PRODUCTS
@@ -74,7 +132,13 @@ const Customers = () => {
     const getProducts = async () => {
         try {
             const response = await axios.get(
-                "http://localhost:4000/api/product/list"
+                "http://localhost:4000/api/product/list",
+                {
+                    params: {
+                        page: 1,
+                        limit: 1000,
+                    },
+                }
             );
 
             if (response.data.status) {
@@ -91,9 +155,12 @@ const Customers = () => {
     // ==========================================
 
     useEffect(() => {
-        getCustomers();
         getProducts();
     }, []);
+
+    useEffect(() => {
+        getCustomers(page, limit, debouncedSearch);
+    }, [page, limit, debouncedSearch, getCustomers]);
 
     // ==========================================
     // INPUT CHANGE
@@ -290,7 +357,8 @@ const Customers = () => {
                 resetForm();
                 setShowForm(false);
 
-                getCustomers();
+                setPage(1);
+                getCustomers(1, limit, debouncedSearch);
             }
 
         } catch (error) {
@@ -319,7 +387,10 @@ const Customers = () => {
             contact_person: customer.contact_person || "",
             gstno: customer.gstno || "",
             mobile: customer.mobile || "",
-            product_id: customer.product_id || "",
+            product_id:
+                customer.product_id ||
+                customer.product?.id ||
+                "",
             start_date: customer.start_date
                 ? customer.start_date.substring(0, 10)
                 : "",
@@ -373,7 +444,7 @@ const Customers = () => {
                     "Customer deleted successfully"
                 );
 
-                getCustomers();
+                getCustomers(page, limit, debouncedSearch);
             }
 
         } catch (error) {
@@ -399,38 +470,15 @@ const Customers = () => {
     };
 
     // ==========================================
-    // SEARCH
+    // PAGINATION
     // ==========================================
 
-    const filteredCustomers = customers.filter((customer) => {
-        const searchText = search.toLowerCase();
+    const handlePageChange = (event) => {
+        const newPage = Math.floor(event.first / event.rows) + 1;
 
-        return (
-            customer.name
-                ?.toLowerCase()
-                .includes(searchText) ||
-
-            customer.mobile
-                ?.toLowerCase()
-                .includes(searchText) ||
-
-            customer.username
-                ?.toLowerCase()
-                .includes(searchText) ||
-
-            customer.company_code
-                ?.toLowerCase()
-                .includes(searchText) ||
-
-            customer.gstno
-                ?.toLowerCase()
-                .includes(searchText) ||
-
-            customer.contact_person
-                ?.toLowerCase()
-                .includes(searchText)
-        );
-    });
+        setPage(newPage);
+        setLimit(event.rows);
+    };
 
     // ==========================================
     // PRODUCT NAME
@@ -438,7 +486,7 @@ const Customers = () => {
 
     const getProductName = (productId) => {
         const product = products.find(
-            (item) => item.id === productId
+            (item) => Number(item.id) === Number(productId)
         );
 
         return product?.name || "-";
@@ -454,6 +502,77 @@ const Customers = () => {
         }
 
         return new Date(date).toLocaleDateString("en-IN");
+    };
+
+    const serialNumberTemplate = (customer, options) => {
+        return (page - 1) * limit + options.rowIndex + 1;
+    };
+
+    const customerBodyTemplate = (customer) => {
+        return (
+            <div>
+                <strong>{customer.name || "-"}</strong>
+
+                <div className="small text-muted">
+                    {customer.address || "-"}
+                </div>
+            </div>
+        );
+    };
+
+    const productBodyTemplate = (customer) => {
+        debugger
+        const productName =
+            customer.product?.name || getProductName(customer.product_id);
+
+        return (
+            <span className="badge bg-primary">
+                {productName}
+            </span>
+        );
+    };
+
+    const startDateBodyTemplate = (customer) => {
+        return formatDate(customer.start_date);
+    };
+
+    const endDateBodyTemplate = (customer) => {
+        return formatDate(customer.end_date);
+    };
+
+    const priceBodyTemplate = (field) => {
+        return (customer) => {
+            return (
+                <>
+                    Rs.{" "}
+                    {Number(customer[field] || 0).toLocaleString(
+                        "en-IN"
+                    )}
+                </>
+            );
+        };
+    };
+
+    const actionBodyTemplate = (customer) => {
+        return (
+            <div className="d-flex gap-2">
+                <button
+                    type="button"
+                    className="btn btn-sm btn-outline-primary"
+                    onClick={() => handleEdit(customer)}
+                >
+                    Edit
+                </button>
+
+                <button
+                    type="button"
+                    className="btn btn-sm btn-outline-danger"
+                    onClick={() => handleDelete(customer.id)}
+                >
+                    Delete
+                </button>
+            </div>
+        );
     };
 
     return (
@@ -898,210 +1017,148 @@ const Customers = () => {
 
                 </div>
 
-                <div className="table-responsive">
+                <div className="card-body">
 
-                    <table className="table table-hover table-bordered mb-0">
+                    <DataTable
+                        value={customers}
+                        loading={listLoading}
+                        lazy
+                        paginator
+                        first={(page - 1) * limit}
+                        rows={limit}
+                        totalRecords={totalRecords}
+                        rowsPerPageOptions={[5, 10, 20, 50]}
+                        onPage={handlePageChange}
+                        responsiveLayout="scroll"
+                        tableStyle={{
+                            minWidth: "90rem",
+                        }}
+                        emptyMessage={
+                            debouncedSearch
+                                ? "No customers found for this search"
+                                : "No customers found"
+                        }
+                        paginatorTemplate={
+                            "FirstPageLink " +
+                            "PrevPageLink " +
+                            "PageLinks " +
+                            "NextPageLink " +
+                            "LastPageLink " +
+                            "RowsPerPageDropdown"
+                        }
+                        currentPageReportTemplate={
+                            "Showing {first} to {last} of {totalRecords} customers"
+                        }
+                        showCurrentPageReport
+                    >
 
-                        <thead className="table-light">
+                        <Column
+                            header="#"
+                            body={serialNumberTemplate}
+                            style={{
+                                width: "80px",
+                            }}
+                        />
 
-                            <tr>
+                        <Column
+                            header="Customer"
+                            body={customerBodyTemplate}
+                            style={{
+                                minWidth: "220px",
+                            }}
+                        />
 
-                                <th>#</th>
+                        <Column
+                            field="contact_person"
+                            header="Contact Person"
+                            style={{
+                                minWidth: "160px",
+                            }}
+                        />
 
-                                <th>Customer</th>
+                        <Column
+                            field="mobile"
+                            header="Mobile"
+                            style={{
+                                minWidth: "130px",
+                            }}
+                        />
 
-                                <th>Contact Person</th>
+                        <Column
+                            field="gstno"
+                            header="GST No"
+                            style={{
+                                minWidth: "160px",
+                            }}
+                        />
 
-                                <th>Mobile</th>
+                        <Column
+                            header="Product"
+                            body={productBodyTemplate}
+                            style={{
+                                minWidth: "140px",
+                            }}
+                        />
 
-                                <th>GST No</th>
+                        <Column
+                            header="Start Date"
+                            body={startDateBodyTemplate}
+                            style={{
+                                minWidth: "120px",
+                            }}
+                        />
 
-                                <th>Product</th>
+                        <Column
+                            header="End Date"
+                            body={endDateBodyTemplate}
+                            style={{
+                                minWidth: "120px",
+                            }}
+                        />
 
-                                <th>Start Date</th>
+                        <Column
+                            header="Product Price"
+                            body={priceBodyTemplate("product_price")}
+                            style={{
+                                minWidth: "140px",
+                            }}
+                        />
 
-                                <th>End Date</th>
+                        <Column
+                            header="AMC Price"
+                            body={priceBodyTemplate("amc_price")}
+                            style={{
+                                minWidth: "120px",
+                            }}
+                        />
 
-                                <th>Product Price</th>
+                        <Column
+                            field="username"
+                            header="Username"
+                            style={{
+                                minWidth: "140px",
+                            }}
+                        />
 
-                                <th>AMC Price</th>
+                        <Column
+                            field="company_code"
+                            header="Company Code"
+                            style={{
+                                minWidth: "150px",
+                            }}
+                        />
 
-                                <th>Username</th>
+                        <Column
+                            header="Action"
+                            body={actionBodyTemplate}
+                            frozen
+                            alignFrozen="right"
+                            style={{
+                                minWidth: "160px",
+                            }}
+                        />
 
-                                <th>Company Code</th>
-
-                                <th>Action</th>
-
-                            </tr>
-
-                        </thead>
-
-                        <tbody>
-
-                            {listLoading ? (
-
-                                <tr>
-
-                                    <td
-                                        colSpan="13"
-                                        className="text-center py-5"
-                                    >
-
-                                        <div
-                                            className="spinner-border text-primary"
-                                            role="status"
-                                        />
-
-                                        <div className="mt-2">
-                                            Loading customers...
-                                        </div>
-
-                                    </td>
-
-                                </tr>
-
-                            ) : filteredCustomers.length > 0 ? (
-
-                                filteredCustomers.map(
-                                    (customer, index) => (
-
-                                        <tr key={customer.id}>
-
-                                            <td>
-                                                {index + 1}
-                                            </td>
-
-                                            <td>
-                                                <strong>
-                                                    {customer.name}
-                                                </strong>
-
-                                                <div className="small text-muted">
-                                                    {customer.address}
-                                                </div>
-                                            </td>
-
-                                            <td>
-                                                {customer.contact_person ||
-                                                    "-"}
-                                            </td>
-
-                                            <td>
-                                                {customer.mobile || "-"}
-                                            </td>
-
-                                            <td>
-                                                {customer.gstno || "-"}
-                                            </td>
-
-                                            <td>
-                                                <span className="badge bg-primary">
-                                                    {getProductName(
-                                                        customer.product_id
-                                                    )}
-                                                </span>
-                                            </td>
-
-                                            <td>
-                                                {formatDate(
-                                                    customer.start_date
-                                                )}
-                                            </td>
-
-                                            <td>
-                                                {formatDate(
-                                                    customer.end_date
-                                                )}
-                                            </td>
-
-                                            <td>
-                                                ₹{" "}
-                                                {Number(
-                                                    customer.product_price ||
-                                                    0
-                                                ).toLocaleString("en-IN")}
-                                            </td>
-
-                                            <td>
-                                                ₹{" "}
-                                                {Number(
-                                                    customer.amc_price ||
-                                                    0
-                                                ).toLocaleString("en-IN")}
-                                            </td>
-
-                                            <td>
-                                                {customer.username || "-"}
-                                            </td>
-
-                                            <td>
-                                                {customer.company_code ||
-                                                    "-"}
-                                            </td>
-
-                                            <td
-                                                style={{
-                                                    minWidth: "150px",
-                                                }}
-                                            >
-
-                                                <button
-                                                    type="button"
-                                                    className="btn btn-sm btn-outline-primary me-2"
-                                                    onClick={() =>
-                                                        handleEdit(
-                                                            customer
-                                                        )
-                                                    }
-                                                >
-                                                    Edit
-                                                </button>
-
-                                                <button
-                                                    type="button"
-                                                    className="btn btn-sm btn-outline-danger"
-                                                    onClick={() =>
-                                                        handleDelete(
-                                                            customer.id
-                                                        )
-                                                    }
-                                                >
-                                                    Delete
-                                                </button>
-
-                                            </td>
-
-                                        </tr>
-
-                                    )
-                                )
-
-                            ) : (
-
-                                <tr>
-
-                                    <td
-                                        colSpan="13"
-                                        className="text-center py-5"
-                                    >
-
-                                        <h6 className="text-muted">
-                                            No customers found
-                                        </h6>
-
-                                        <p className="text-muted mb-0">
-                                            Add your first customer.
-                                        </p>
-
-                                    </td>
-
-                                </tr>
-
-                            )}
-
-                        </tbody>
-
-                    </table>
+                    </DataTable>
 
                 </div>
 

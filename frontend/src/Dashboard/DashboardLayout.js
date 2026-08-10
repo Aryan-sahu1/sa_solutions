@@ -20,7 +20,7 @@ const DashboardLayout = () => {
 
             <style>{`
                 .dashboard-main {
-                    margin-left: 250px;
+                    margin-left: var(--sidebar-width, 250px);
                 }
 
                 @media (max-width: 767.98px) {

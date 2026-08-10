@@ -1,5 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
+import { DataTable } from "primereact/datatable";
+import { Column } from "primereact/column";
 
 const Staff = () => {
     const [staffList, setStaffList] = useState([]);
@@ -18,25 +20,41 @@ const Staff = () => {
     const [loading, setLoading] = useState(false);
     const [listLoading, setListLoading] = useState(false);
 
+    const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(10);
+    const [totalRecords, setTotalRecords] = useState(0);
+    const searchRef = useRef(null);
+
     const [message, setMessage] = useState("");
     const [error, setError] = useState("");
 
     // ==========================================
     // GET STAFF LIST
     // ==========================================
-    const getStaffList = async () => {
+    const getStaffList = async ({ p = page, l = limit, s = search } = {}) => {
         try {
             setListLoading(true);
             setError("");
 
             const response = await axios.get(
-                "http://localhost:4000/api/staff/"
+                "http://localhost:4000/api/staff/",
+                {
+                    params: {
+                        limit: l,
+                        page: p,
+                        search: s
+                    }
+                }
             );
 
             if (response.data.status) {
                 setStaffList(response.data.data || []);
+                setTotalRecords(response.data.pagination?.total || 0);
+                setPage(response.data.pagination?.page || p);
+                setLimit(response.data.pagination?.limit || l);
             } else {
                 setStaffList([]);
+                setTotalRecords(0);
             }
 
         } catch (error) {
@@ -73,7 +91,7 @@ const Staff = () => {
     // PAGE LOAD
     // ==========================================
     useEffect(() => {
-        getStaffList();
+        getStaffList({ p: 1, l: limit, s: "" });
         getProducts();
     }, []);
 
@@ -275,21 +293,36 @@ const Staff = () => {
     };
 
     // ==========================================
-    // SEARCH
+    // SEARCH (debounced)
     // ==========================================
-    const filteredStaff = staffList.filter((staff) => {
+    useEffect(() => {
+        if (searchRef.current) {
+            clearTimeout(searchRef.current);
+        }
 
-        const staffName =
-            staff.name?.toLowerCase() || "";
+        searchRef.current = setTimeout(() => {
+            getStaffList({ p: 1, l: limit, s: search });
+        }, 400);
 
-        const productName =
-            staff.product?.name?.toLowerCase() || "";
+        return () => clearTimeout(searchRef.current);
+    }, [search]);
 
-        return (
-            staffName.includes(search.toLowerCase()) ||
-            productName.includes(search.toLowerCase())
-        );
+    const onPage = (event) => {
+    const newPage = Math.floor(event.first / event.rows) + 1;
+    const newLimit = event.rows;
+
+    console.log("Page:", newPage);
+    console.log("Limit:", newLimit);
+
+    setPage(newPage);
+    setLimit(newLimit);
+
+    getStaffList({
+        p: newPage,
+        l: newLimit,
+        s: search,
     });
+};
 
     return (
         <div className="container-fluid p-4">
@@ -490,134 +523,92 @@ const Staff = () => {
 
                 </div>
 
-                <div className="table-responsive">
+                <div className="p-3">
+                  <DataTable
+    value={staffList}
+    lazy
+    paginator
+    first={(page - 1) * limit}
+    rows={limit}
+    totalRecords={totalRecords}
 
-                    <table className="table table-hover mb-0">
+    onPage={onPage}
 
-                        <thead className="table-light">
+    rowsPerPageOptions={[ 5, 10, 20, 50]}
 
-                            <tr>
-                                <th>#</th>
-                                <th>Staff Name</th>
-                                <th>Product</th>
-                                <th>Created At</th>
-                                <th>Updated At</th>
-                                <th>Action</th>
-                            </tr>
+    paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown CurrentPageReport"
 
-                        </thead>
+    currentPageReportTemplate="Showing {first} to {last} of {totalRecords} records"
 
-                        <tbody>
+    loading={listLoading}
 
-                            {listLoading ? (
+    responsiveLayout="scroll"
 
-                                <tr>
-                                    <td
-                                        colSpan="6"
-                                        className="text-center py-5"
-                                    >
-                                        <div
-                                            className="spinner-border text-primary"
-                                            role="status"
-                                        />
+    emptyMessage="No staff found"
+>
+    <Column
+        header="#"
+        body={(rowData, options) =>
+            (page - 1) * limit + options.rowIndex + 1
+        }
+        style={{ width: "60px" }}
+    />
 
-                                        <div className="mt-2">
-                                            Loading...
-                                        </div>
-                                    </td>
-                                </tr>
+    <Column
+        field="name"
+        header="Staff Name"
+    />
 
-                            ) : filteredStaff.length > 0 ? (
+    <Column
+        header="Product"
+        body={(rowData) => (
+            <span className="badge bg-primary">
+                {rowData.product?.name || "-"}
+            </span>
+        )}
+    />
 
-                                filteredStaff.map((staff, index) => (
+    <Column
+        header="Created At"
+        body={(rowData) =>
+            rowData.created_at
+                ? new Date(rowData.created_at).toLocaleString()
+                : "-"
+        }
+    />
 
-                                    <tr key={staff.id}>
+    <Column
+        header="Updated At"
+        body={(rowData) =>
+            rowData.updated_at
+                ? new Date(rowData.updated_at).toLocaleString()
+                : "-"
+        }
+    />
 
-                                        <td>
-                                            {index + 1}
-                                        </td>
+    <Column
+        header="Action"
+        body={(rowData) => (
+            <>
+                <button
+                    type="button"
+                    className="btn btn-sm btn-outline-primary me-2"
+                    onClick={() => handleEdit(rowData)}
+                >
+                    Edit
+                </button>
 
-                                        <td>
-                                            <strong>
-                                                {staff.name}
-                                            </strong>
-                                        </td>
-
-                                        <td>
-
-                                            <span className="badge bg-primary">
-                                                {staff.product?.name || "-"}
-                                            </span>
-
-                                        </td>
-
-                                        <td>
-                                            {staff.created_at
-                                                ? new Date(
-                                                    staff.created_at
-                                                ).toLocaleString()
-                                                : "-"}
-                                        </td>
-
-                                        <td>
-                                            {staff.updated_at
-                                                ? new Date(
-                                                    staff.updated_at
-                                                ).toLocaleString()
-                                                : "-"}
-                                        </td>
-
-                                        <td>
-
-                                            <button
-                                                type="button"
-                                                className="btn btn-sm btn-outline-primary me-2"
-                                                onClick={() =>
-                                                    handleEdit(staff)
-                                                }
-                                            >
-                                                Edit
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                className="btn btn-sm btn-outline-danger"
-                                                onClick={() =>
-                                                    handleDelete(staff.id)
-                                                }
-                                            >
-                                                Delete
-                                            </button>
-
-                                        </td>
-
-                                    </tr>
-
-                                ))
-
-                            ) : (
-
-                                <tr>
-
-                                    <td
-                                        colSpan="6"
-                                        className="text-center py-5"
-                                    >
-
-                                        <h6 className="text-muted">
-                                            No staff found
-                                        </h6>
-
-                                    </td>
-
-                                </tr>
-
-                            )}
-
-                        </tbody>
-
-                    </table>
-
+                <button
+                    type="button"
+                    className="btn btn-sm btn-outline-danger"
+                    onClick={() => handleDelete(rowData.id)}
+                >
+                    Delete
+                </button>
+            </>
+        )}
+    />
+</DataTable>
                 </div>
 
             </div>

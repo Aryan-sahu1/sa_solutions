@@ -3,7 +3,7 @@ const { generateToken } = require("../utils/jwt")
 
 const authService = require("../service/auth.service")
 
-const register = async (req, res) => {
+const register = async (req, res, next) => {
     try {
 
         if (!req.body.username || !req.body.password) {
@@ -12,14 +12,10 @@ const register = async (req, res) => {
             })
         }
 
-
         const data = await authService.register(req.body);
 
         // Generate JWT
         const token = generateToken(data);
-
-
-
         res.status(200).json({
             status: true,
             message: "company created successfully",
@@ -27,27 +23,21 @@ const register = async (req, res) => {
             token: token
         })
     } catch (error) {
-        res.status(200).json({
-            status: false,
-            message: error.message
-        })
+        next(error);
     }
 
 
 }
 
 
-const login = async (req, res) => {
+const login = async (req, res, next) => {
     try {
-
         const { username, password } = req.body;
-
         if (!username || !password) {
             return res.status(400).json({
                 message: "Username and password are required",
             });
         }
-
         const result = await authService.loginUser(
             username,
             password
@@ -59,17 +49,12 @@ const login = async (req, res) => {
         });
 
     } catch (error) {
-
-        console.error(error);
-
-        return res.status(401).json({
-            message: error.message,
-        });
+        next(error);
     }
 };
 
 
-const findAll = async (req, res) => {
+const findAll = async (req, res, next) => {
     try {
         const data = await authService.findAll();
         res.status(200).json({
@@ -78,15 +63,26 @@ const findAll = async (req, res) => {
             data: data
         })
     } catch (error) {
-        res.status(200).json({
-            status: false,
-            message: error.message,
-        })
+        next(error);
+    }
+}
+
+const verifyCompany = async (req, res, next) => {
+    try {
+        const company = req.company || await authService.verifyCompany(req.user.id);
+
+        return res.status(200).json({
+            status: true,
+            message: "Company verified successfully",
+            data: company
+        });
+    } catch (error) {
+        next(error);
     }
 }
 
 
-const changePassword = async (req, res) => {
+const changePassword = async (req, res, next) => {
     try {
         const { currentPassword, newPassword } = req.body;
         if (!currentPassword || !newPassword) {
@@ -115,11 +111,8 @@ const changePassword = async (req, res) => {
     } catch (error) {
         console.error("Change Password Error:", error);
 
-        return res.status(400).json({
-            status: false,
-            message: error.message,
-        });
+        next(error);
     }
 }
 
-module.exports = { register, login, findAll, changePassword }
+module.exports = { register, login, findAll, verifyCompany, changePassword }

@@ -9,13 +9,10 @@ const register = async (body) => {
     const companyExist = await authRepository.findByUsername(
         body.username
     );
-
     if (companyExist) {
         throw new Error("Username already exists");
     }
-
     const hashPassword = await bcrypt.hash(body.password, 10);
-
     const companyData = {
         ...body,
         password: hashPassword
@@ -29,8 +26,8 @@ const loginUser = async (username, password) => {
 
     // Find user
     const user =
-        await authRepository.findByUsername(username); 
-    if (!user) { 
+        await authRepository.findByUsername(username);
+    if (!user) {
         throw new Error("Invalid username or password");
     }
 
@@ -44,7 +41,7 @@ const loginUser = async (username, password) => {
     if (!isPasswordValid) {
         throw new Error("Invalid username or passwordfverfgr");
     }
- 
+
     // Generate JWT
     const token = generateToken({
         id: user.id,
@@ -61,20 +58,25 @@ const loginUser = async (username, password) => {
 };
 
 const findAll = async () => {
-    try {
-        const data = await authRepository.findAll();
-        return data;
-    } catch (error) { 
-        return error.message;
-    }
+    const data = await authRepository.findAll();
+    return data;
 }
 
-const changePassword = async (userId, currentPassword, newPassword) => { 
+const verifyCompany = async (userId) => {
+    const company = await authRepository.findCompanyById(userId);
+    if (!company) {
+        throw new Error("Company Not Found...")
+    }
+
+    return company;
+}
+
+const changePassword = async (userId, currentPassword, newPassword) => {
     const company = await authRepository.findById(userId);
     if (!company) {
         throw new Error("Company Not Found...")
-    } 
-    const ispasswordvalid = await bcrypt.compare(currentPassword, company.password) 
+    }
+    const ispasswordvalid = await bcrypt.compare(currentPassword, company.password)
 
     if (!ispasswordvalid) {
         throw new Error("Password is INvalid")
@@ -90,4 +92,4 @@ const changePassword = async (userId, currentPassword, newPassword) => {
 
 }
 
-module.exports = { register, loginUser, findAll, changePassword }
+module.exports = { register, loginUser, findAll, verifyCompany, changePassword }
