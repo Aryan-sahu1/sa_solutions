@@ -11,6 +11,7 @@ const tHeadMasterRoutes = require("./routes/tHeadMaster.routes");
 const partyRoutes = require("./routes/party.routes");
 const productCategoryRoutes = require("./routes/productCategory.routes");
 const stockItemRoutes = require("./routes/stockItem.routes");
+const staffMemberRoutes = require("./routes/staffMember.routes");
 const customerRoutes =
     require("./routes/customer.routes");
 const errorHandler = require("./middleware/errorHandler");
@@ -28,6 +29,7 @@ app.use("/api/t-head-master", tHeadMasterRoutes);
 app.use("/api/party", partyRoutes);
 app.use("/api/product-category", productCategoryRoutes);
 app.use("/api/stock-item", stockItemRoutes);
+app.use("/api/staff-member", staffMemberRoutes);
 app.use("/api/customers", customerRoutes);
 
 

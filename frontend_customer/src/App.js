@@ -10,15 +10,16 @@ import CompanyLogin from "./component/CompanyLogin";
 import DashboardLayout from "./Dashboard/DashboardLayout";
 import Dashboard from "./Dashboard/Dashboard";
 import ProtectedRoute from "./ProtectedRoute/ProtectedRoute";
-import Staff from "./component/Staff";
-import Customers from "./component/Customers";
+// import Staff from "./component/Staff";
+// import Customers from "./component/Customers";
 import ChangePassword from "./component/ChangePassword";
-import Product from "./component/Product";
+// import Product from "./component/Product";
 import HeadMaster from "./component/HeadMaster";
 import THeadMaster from "./component/THeadMaster";
 import Party from "./component/Party";
 import ProductCategory from "./component/ProductCategory";
 import StockItem from "./component/StockItem";
+import StaffMember from "./component/StaffMember";
 import { AuthProvider } from "./context/AuthContext";
 
  
@@ -49,24 +50,24 @@ const App = () => {
                             element={<Dashboard />}
                         />
 
-                        <Route
+                        {/* <Route
                             path="/customers"
                             element={<Customers />}
-                        />
+                        /> */}
 
-                        <Route
+                        {/* <Route
                             path="/staff"
                             element={<Staff />}
-                        />
+                        /> */}
                         <Route
                             path="/change-password"
                             element={<ChangePassword />}
                         />
 
-                        <Route
+                        {/* <Route
                             path="/product"
                             element={<Product />}
-                        />
+                        /> */}
 
                         <Route
                             path="/head-master"
@@ -91,6 +92,11 @@ const App = () => {
                         <Route
                             path="/stock-item"
                             element={<StockItem />}
+                        />
+
+                        <Route
+                            path="/staff-member"
+                            element={<StaffMember />}
                         />
                     </Route>
 
