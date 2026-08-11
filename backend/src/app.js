@@ -6,6 +6,7 @@ const authRoutes = require("./routes/auth.routes")
 const productRoutes = require("./routes/product.routes")
 const dashboardRoutes = require("./routes/dashboard.routes")
 const staffRoutes = require("./routes/staff.routes");
+const headMasterRoutes = require("./routes/headMaster.routes");
 const customerRoutes =
     require("./routes/customer.routes");
 const errorHandler = require("./middleware/errorHandler");
@@ -18,6 +19,7 @@ app.use("/api/product", productRoutes)
 app.use("/api/dashboard", dashboardRoutes)
 app.use("/api/auth", authRoutes)
 app.use("/api/staff", staffRoutes);
+app.use("/api/head-master", headMasterRoutes);
 app.use("/api/customers", customerRoutes);
 
 

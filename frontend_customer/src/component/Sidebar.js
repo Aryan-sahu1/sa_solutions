@@ -23,7 +23,7 @@ const menuItems = [
         children: [
             { to: "/product", label: "Accounts", icon: <FaBoxOpen /> },
             { to: "/staff", label: "Stock Item", icon: <FaUserTie /> },
-            { to: "/customers", label: "Head Master", icon: <FaUsers /> },
+            { to: "/head-master", label: "Head Master", icon: <FaUsers /> },
               { to: "/customers", label: "Vehicle", icon: <FaUsers /> },
         ],
     },

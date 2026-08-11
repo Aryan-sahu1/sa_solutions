@@ -14,6 +14,7 @@ import Staff from "./component/Staff";
 import Customers from "./component/Customers";
 import ChangePassword from "./component/ChangePassword";
 import Product from "./component/Product";
+import HeadMaster from "./component/HeadMaster";
 import { AuthProvider } from "./context/AuthContext";
 
  
@@ -61,6 +62,11 @@ const App = () => {
                         <Route
                             path="/product"
                             element={<Product />}
+                        />
+
+                        <Route
+                            path="/head-master"
+                            element={<HeadMaster />}
                         />
                     </Route>
 
