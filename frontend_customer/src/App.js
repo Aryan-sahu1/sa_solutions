@@ -18,6 +18,7 @@ import HeadMaster from "./component/HeadMaster";
 import THeadMaster from "./component/THeadMaster";
 import Party from "./component/Party";
 import ProductCategory from "./component/ProductCategory";
+import StockItem from "./component/StockItem";
 import { AuthProvider } from "./context/AuthContext";
 
  
@@ -85,6 +86,11 @@ const App = () => {
                         <Route
                             path="/product-category"
                             element={<ProductCategory />}
+                        />
+
+                        <Route
+                            path="/stock-item"
+                            element={<StockItem />}
                         />
                     </Route>
 
