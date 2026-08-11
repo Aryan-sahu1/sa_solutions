@@ -158,32 +158,50 @@ const findAll = async (page, limit, search) => {
 const findById = async (id) => {
     const sql = `
         SELECT
-            id,
-            name,
-            address,
-            address1,
-            contact_person,
-            gstno,
-            mobile,
-            product_id,
-            start_date,
-            end_date,
-            product_price,
-            amc_price,
-            username,
-            company_code,
-            remarks,
-            created_at,
-            updated_at,
-            deleted_at
-        FROM customers
-        WHERE id = ?
-        AND deleted_at IS NULL
+            c.id,
+            c.name,
+            c.address,
+            c.address1,
+            c.contact_person,
+            c.gstno,
+            c.mobile,
+            c.product_id,
+            c.start_date,
+            c.end_date,
+            c.product_price,
+            c.amc_price,
+            c.username,
+            c.company_code,
+            c.remarks,
+            c.created_at,
+            c.updated_at,
+            c.deleted_at,
+            p.name AS product_name
+        FROM customers c
+        LEFT JOIN products p
+            ON c.product_id = p.id
+            AND p.deleted_at IS NULL
+        WHERE c.id = ?
+        AND c.deleted_at IS NULL
     `;
 
     const [rows] = await db.query(sql, [id]);
 
-    return rows[0] || null;
+    if (!rows[0]) {
+        return null;
+    }
+
+    const { product_name, ...customer } = rows[0];
+
+    return {
+        ...customer,
+        product: customer.product_id
+            ? {
+                id: customer.product_id,
+                name: product_name
+            }
+            : null
+    };
 };
 
 
@@ -244,11 +262,20 @@ const remove = async (id) => {
     return result;
 };
 
+const findByUsername = async (username) => {
+    const [rows] = await db.query(
+        "SELECT id, name, username, password FROM customers WHERE username = ?",
+        [username]
+    );
+    return rows[0] || null;
+};
+
 
 module.exports = {
     create,
     findAll,
     findById,
     update,
-    remove
+    remove,
+    findByUsername
 };

@@ -2,7 +2,7 @@ const customerService = require("../service/customer.service");
 
 
 // CREATE
-const create = async (req, res,next) => {
+const create = async (req, res, next) => {
     try {
         const result = await customerService.create(req.body);
 
@@ -13,13 +13,13 @@ const create = async (req, res,next) => {
         });
 
     } catch (error) {
-       next(error)
+        next(error)
     }
 };
 
 
 // GET ALL
-const findAll = async (req, res,next) => {
+const findAll = async (req, res, next) => {
     try {
         const page = Number(req.query.page) || 1;
         const limit = Number(req.query.limit) || 10;
@@ -41,7 +41,7 @@ const findAll = async (req, res,next) => {
 
 
 // GET BY ID
-const findById = async (req, res,next) => {
+const findById = async (req, res, next) => {
     try {
         const { id } = req.params;
 
@@ -60,7 +60,7 @@ const findById = async (req, res,next) => {
 
 
 // UPDATE
-const update = async (req, res,next) => {
+const update = async (req, res, next) => {
     try {
         const { id } = req.params;
 
@@ -82,7 +82,7 @@ const update = async (req, res,next) => {
 
 
 // DELETE
-const remove = async (req, res,next) => {
+const remove = async (req, res, next) => {
     try {
         const { id } = req.params;
 
@@ -95,7 +95,44 @@ const remove = async (req, res,next) => {
         });
 
     } catch (error) {
-       next(error)
+        next(error)
+    }
+};
+
+const login = async (req, res, next) => {
+    try {
+        const { username, password } = req.body;
+        if (!username || !password) {
+            return res.status(400).json({
+                message: "Username and password are required",
+            });
+        }
+        const result = await customerService.loginUser(
+            username,
+            password
+        );
+
+        return res.status(200).json({
+            message: "Login successful",
+            ...result,
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+const verifyCustomer = async (req, res, next) => {
+    try {
+        const customer = req.customer || await customerService.verifyCustomer(req.user.id);
+
+        return res.status(200).json({
+            status: true,
+            message: "Customer verified successfully",
+            data: customer
+        });
+    } catch (error) {
+        next(error);
     }
 };
 
@@ -105,5 +142,7 @@ module.exports = {
     findAll,
     findById,
     update,
-    remove
+    remove,
+    login,
+    verifyCustomer
 };

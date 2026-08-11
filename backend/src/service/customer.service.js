@@ -1,5 +1,6 @@
 const customerRepository = require("../repository/customer.repository");
-
+const bcrypt = require("bcrypt")
+const {generateToken} = require("../utils/jwt")
 const create = async (body) => {
     if (!body.name) {
         throw new Error("Customer name is required");
@@ -12,7 +13,10 @@ const create = async (body) => {
     if (!body.password) {
         throw new Error("Password is required");
     }
-
+    const hashedPassword = await bcrypt.hash(body.password, 10);
+    console.log(hashedPassword, "passwaor")
+    body.password
+        = hashedPassword
     const result = await customerRepository.create(body);
 
     return result;
@@ -71,6 +75,51 @@ const remove = async (id) => {
     const result = await customerRepository.remove(id);
     return result;
 };
+const loginUser = async (username, password) => {
+
+    // Find user
+    const user =
+        await customerRepository.findByUsername(username);
+    if (!user) {
+        throw new Error("Invalid username or password");
+    }
+
+    // Compare password
+    const isPasswordValid =
+        await bcrypt.compare(
+            password,
+            user.password
+        );
+
+    if (!isPasswordValid) {
+        throw new Error("Invalid username or passwordfverfgr");
+    }
+
+    // Generate JWT
+    const token = generateToken({
+        id: user.id,
+        username: user.username,
+    });
+
+    return {
+        token,
+        user: {
+            id: user.id,
+            username: user.username,
+        },
+    };
+};
+
+const verifyCustomer = async (userId) => {
+    const customer = await customerRepository.findById(userId);
+
+    if (!customer) {
+        throw new Error("Customer Not Found...");
+    }
+
+    return customer;
+};
+
 
 
 module.exports = {
@@ -78,5 +127,7 @@ module.exports = {
     findAll,
     findById,
     update,
-    remove
+    remove,
+    loginUser,
+    verifyCustomer
 };
