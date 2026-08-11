@@ -24,6 +24,7 @@ const menuItems = [
             { to: "/product", label: "Accounts", icon: <FaBoxOpen /> },
             { to: "/staff", label: "Stock Item", icon: <FaUserTie /> },
             { to: "/head-master", label: "Head Master", icon: <FaUsers /> },
+            { to: "/t-head-master", label: "T Head Master", icon: <FaUsers /> },
               { to: "/customers", label: "Vehicle", icon: <FaUsers /> },
         ],
     },
