@@ -25,10 +25,10 @@ const menuItems = [
             { to: "/staff", label: "Stock Item", icon: <FaUserTie /> },
             { to: "/head-master", label: "Head Master", icon: <FaUsers /> },
             { to: "/t-head-master", label: "T Head Master", icon: <FaUsers /> },
-              { to: "/customers", label: "Vehicle", icon: <FaUsers /> },
+            { to: "/party", label: "Party", icon: <FaUsers /> },
         ],
     },
-    { to: "/change-password", label: "Change Password", icon: <FaKey /> },
+    // { to: "/change-password", label: "Change Password", icon: <FaKey /> },
 ];
 
 const Sidebar = () => {

@@ -18,7 +18,7 @@ const create = async (body, userId) => {
 const findAll = async ({ userId, page = 1, limit = 10, search = "" } = {}) => {
     const offset = (page - 1) * limit;
 
-    let where = `WHERE cid = ?`;
+    let where = `WHERE deleted_at IS NULL AND cid = ?`;
     const params = [userId];
 
     if (search && String(search).trim() !== "") {
@@ -34,7 +34,8 @@ const findAll = async ({ userId, page = 1, limit = 10, search = "" } = {}) => {
             name,
             head_type,
             created_at,
-            updated_at
+            updated_at,
+            deleted_at
         FROM t_head_master
         ${where}
         ORDER BY id DESC
@@ -78,10 +79,12 @@ const findById = async (id, userId) => {
             name,
             head_type,
             created_at,
-            updated_at
+            updated_at,
+            deleted_at
         FROM t_head_master
         WHERE id = ?
         AND cid = ?
+        AND deleted_at IS NULL
     `;
 
     const [rows] = await db.query(sql, [id, userId]);
@@ -96,6 +99,7 @@ const update = async (id, body, userId) => {
             head_type = ?
         WHERE id = ?
         AND cid = ?
+        AND deleted_at IS NULL
     `;
 
     const [result] = await db.query(sql, [
@@ -110,9 +114,11 @@ const update = async (id, body, userId) => {
 
 const remove = async (id, userId) => {
     const sql = `
-        DELETE FROM t_head_master
+        UPDATE t_head_master
+        SET deleted_at = CURRENT_TIMESTAMP
         WHERE id = ?
         AND cid = ?
+        AND deleted_at IS NULL
     `;
 
     const [result] = await db.query(sql, [id, userId]);
