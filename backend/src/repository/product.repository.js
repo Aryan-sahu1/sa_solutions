@@ -14,7 +14,6 @@ const findAll = async (page, limit, search) => {
 
     // Search
     if (search && search.trim() !== "") {
-        console.log(search,"kbfwehwebfjebhfjhw")
         where += ` AND name LIKE ?`;
         params.push(`%${search.trim()}%`);
     }
@@ -59,8 +58,49 @@ const findAll = async (page, limit, search) => {
     };
 };
 
+const findById = async (id) => {
+    const sql = `
+        SELECT *
+        FROM products
+        WHERE id = ?
+        AND deleted_at IS NULL
+    `;
+
+    const [rows] = await db.query(sql, [id]);
+
+    return rows[0] || null;
+};
+
+const update = async (id, body) => {
+    const sql = `
+        UPDATE products
+        SET name = ?
+        WHERE id = ?
+        AND deleted_at IS NULL
+    `;
+
+    const [result] = await db.query(sql, [body.name, id]);
+
+    return result;
+};
+
+const remove = async (id) => {
+    const sql = `
+        UPDATE products
+        SET deleted_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+        AND deleted_at IS NULL
+    `;
+
+    const [result] = await db.query(sql, [id]);
+
+    return result;
+};
+
 module.exports = {
     create,
-    findAll
-
+    findAll,
+    findById,
+    update,
+    remove
 };

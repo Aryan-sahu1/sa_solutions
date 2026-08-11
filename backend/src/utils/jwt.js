@@ -3,8 +3,6 @@ require("dotenv").config();
 const JWT_SECRET = process.env.JWT_SECRET;
 const expiresIn = process.env.JWT_EXPIRES_IN;
 const generateToken = (user) => {
-    console.log(JWT_SECRET,expiresIn,"expiresInexpiresInexpiresIn")
-    console.log(user,"userusre")
     return jwt.sign(
         {
             id: user.id,

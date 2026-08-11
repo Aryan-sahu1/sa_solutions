@@ -59,7 +59,6 @@ const findAll = async ({ limit = 10, page = 1, search = "" } = {}) => {
 
     const [countResult] = await db.query(countSql, countParams);
     const [rows] = await db.query(dataSql, dataParams);
-console.log(rows,countResult,"llllll")
     const total = (countResult && countResult[0] && countResult[0].total) || 0;
 
     return { rows, total };

@@ -20,4 +20,28 @@ const findAll = async (page,limit,search) => {
      
 }
 
-module.exports = { create, findAll }
+const update = async (id, body) => {
+    const product = await productRepository.findById(id);
+
+    if (!product) {
+        throw new Error("Product not found");
+    }
+
+    await productRepository.update(id, body);
+
+    return await productRepository.findById(id);
+}
+
+const remove = async (id) => {
+    const product = await productRepository.findById(id);
+
+    if (!product) {
+        throw new Error("Product not found");
+    }
+
+    await productRepository.remove(id);
+
+    return true;
+}
+
+module.exports = { create, findAll, update, remove }

@@ -87,8 +87,6 @@ const Customers = () => {
                     }
                 );
 
-                console.log("Customers:", response.data);
-
                 if (response.data.status) {
                     const customerRows = (response.data.data || []).map(
                         (customer) => ({
@@ -342,8 +340,6 @@ const Customers = () => {
                 );
             }
 
-            console.log("Customer response:", response.data);
-
             if (response.data.status) {
                 setMessage(
                     response.data.message ||
@@ -436,8 +432,6 @@ const Customers = () => {
                 `http://localhost:4000/api/customers/${id}`
             );
 
-            console.log("Delete response:", response.data);
-
             if (response.data.status) {
                 setMessage(
                     response.data.message ||
@@ -521,7 +515,6 @@ const Customers = () => {
     };
 
     const productBodyTemplate = (customer) => {
-        debugger
         const productName =
             customer.product?.name || getProductName(customer.product_id);
 

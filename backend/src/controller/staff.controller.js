@@ -27,7 +27,7 @@ const findAll = async (req, res,next) => {
      
 
         const result = await staffCategoryService.findAll(options);
-    const totalPages = Math.ceil(result.total / limit);
+        const totalPages = Math.ceil(result.total / options.limit);
         return res.status(200).json({
             status: true,
             message: "Staff categories fetched successfully",

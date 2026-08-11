@@ -25,6 +25,7 @@ const Sidebar = () => {
 
     const logout = () => {
         localStorage.removeItem("token");
+        sessionStorage.removeItem("verifiedToken");
         navigate("/login");
     };
 

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios"
 import { useNavigate } from "react-router-dom";
 const CompanyLogin = () => {
@@ -9,6 +9,32 @@ const CompanyLogin = () => {
     const [loading, setLoading] = useState(false)
     const [message, setMessage] = useState("")
     const navigate = useNavigate();
+
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+
+        const verifyToken = async () => {
+            if (!token) {
+                return;
+            }
+
+            try {
+                await axios.get("http://localhost:4000/api/auth/verify-company", {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                });
+
+                sessionStorage.setItem("verifiedToken", token);
+                navigate("/dashboard", { replace: true });
+            } catch (error) {
+                localStorage.removeItem("token");
+                sessionStorage.removeItem("verifiedToken");
+            }
+        };
+
+        verifyToken();
+    }, [navigate]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -42,12 +68,14 @@ const CompanyLogin = () => {
                     },
                 });
 
+                sessionStorage.setItem("verifiedToken", res.data.token);
                 setMessage("Login Successfully")
                 navigate("/dashboard");
             }
 
         } catch (error) {
             localStorage.removeItem("token");
+            sessionStorage.removeItem("verifiedToken");
             console.error("Login Error:", error); setMessage(error.response?.data?.message || "Something went wrong");
         } finally {
             setLoading(false);

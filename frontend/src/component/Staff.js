@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useCallback, useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
@@ -31,7 +31,7 @@ const Staff = () => {
     // ==========================================
     // GET STAFF LIST
     // ==========================================
-    const getStaffList = async ({ p = page, l = limit, s = search } = {}) => {
+    const getStaffList = useCallback(async ({ p = 1, l = 10, s = "" } = {}) => {
         try {
             setListLoading(true);
             setError("");
@@ -67,12 +67,12 @@ const Staff = () => {
         } finally {
             setListLoading(false);
         }
-    };
+    }, []);
 
     // ==========================================
     // GET PRODUCTS
     // ==========================================
-    const getProducts = async () => {
+    const getProducts = useCallback(async () => {
         try {
             const response = await axios.get(
                 "http://localhost:4000/api/product/list"
@@ -85,15 +85,15 @@ const Staff = () => {
         } catch (error) {
             console.error("Product List Error:", error);
         }
-    };
+    }, []);
 
     // ==========================================
     // PAGE LOAD
     // ==========================================
     useEffect(() => {
-        getStaffList({ p: 1, l: limit, s: "" });
+        getStaffList({ p: 1, l: 10, s: "" });
         getProducts();
-    }, []);
+    }, [getProducts, getStaffList]);
 
     // ==========================================
     // INPUT CHANGE
@@ -188,7 +188,7 @@ const Staff = () => {
                 setEditId(null);
                 setShowForm(false);
 
-                getStaffList();
+                getStaffList({ p: page, l: limit, s: search });
             }
 
         } catch (error) {
@@ -260,7 +260,7 @@ const Staff = () => {
                     "Staff deleted successfully"
                 );
 
-                getStaffList();
+                getStaffList({ p: page, l: limit, s: search });
             }
 
         } catch (error) {
@@ -305,14 +305,11 @@ const Staff = () => {
         }, 400);
 
         return () => clearTimeout(searchRef.current);
-    }, [search]);
+    }, [getStaffList, limit, search]);
 
     const onPage = (event) => {
     const newPage = Math.floor(event.first / event.rows) + 1;
     const newLimit = event.rows;
-
-    console.log("Page:", newPage);
-    console.log("Limit:", newLimit);
 
     setPage(newPage);
     setLimit(newLimit);

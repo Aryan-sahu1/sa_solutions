@@ -1,18 +1,24 @@
 import React, { useEffect, useState } from 'react'
 import axios from "axios";
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 
 const ProtectedRoute = ({ children }) => {
-    const [isChecking, setIsChecking] = useState(true);
-    const [isVerified, setIsVerified] = useState(false);
     const token = localStorage.getItem("token");
-    const location = useLocation();
+    const cachedToken = sessionStorage.getItem("verifiedToken");
+    const hasCachedVerification = Boolean(token && cachedToken === token);
+    const [isChecking, setIsChecking] = useState(!hasCachedVerification);
+    const [isVerified, setIsVerified] = useState(hasCachedVerification);
 
     useEffect(() => {
         const verifyCompany = async () => {
-            setIsChecking(true);
-
             if (!token) {
+                sessionStorage.removeItem("verifiedToken");
+                setIsChecking(false);
+                return;
+            }
+
+            if (sessionStorage.getItem("verifiedToken") === token) {
+                setIsVerified(true);
                 setIsChecking(false);
                 return;
             }
@@ -24,9 +30,11 @@ const ProtectedRoute = ({ children }) => {
                     },
                 });
 
+                sessionStorage.setItem("verifiedToken", token);
                 setIsVerified(true);
             } catch (error) {
                 localStorage.removeItem("token");
+                sessionStorage.removeItem("verifiedToken");
                 setIsVerified(false);
             } finally {
                 setIsChecking(false);
@@ -34,7 +42,7 @@ const ProtectedRoute = ({ children }) => {
         };
 
         verifyCompany();
-    }, [token, location.pathname]);
+    }, [token]);
 
     if (isChecking) {
         return <div className="p-4 text-center">Checking login...</div>;

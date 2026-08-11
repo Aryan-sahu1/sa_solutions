@@ -20,6 +20,7 @@ const Product = () => {
 
     const [productName, setProductName] = useState("");
     const [showForm, setShowForm] = useState(false);
+    const [editId, setEditId] = useState(null);
 
     // ============================
     // LOADING
@@ -71,10 +72,9 @@ const params={
     page:currentPage,
     limit:currentLimit
 }
-if(currentSearch !=""){
+if(currentSearch !== ""){
     params.search=currentSearch
 }
-console.log(params,"hghrthrhrtrhtth")
                 const response = await axios.get(
                     "http://localhost:4000/api/product/list",
                     {
@@ -85,8 +85,6 @@ console.log(params,"hghrthrhrtrhtth")
                         },
                     }
                 );
-
-                console.log("PRODUCT API RESPONSE:", response.data);
 
                 if (response.data.status) {
                     setProducts(response.data.data || []);
@@ -145,10 +143,15 @@ console.log(params,"hghrthrhrtrhtth")
     ]);
 
     // ============================
-    // ADD PRODUCT
+    // SAVE PRODUCT
     // ============================
 
-    const handleAddProduct = async (e) => {
+    const resetForm = () => {
+        setProductName("");
+        setEditId(null);
+    };
+
+    const handleSaveProduct = async (e) => {
         e.preventDefault();
 
         setMessage("");
@@ -164,17 +167,19 @@ console.log(params,"hghrthrhrtrhtth")
         try {
             setLoading(true);
 
-            const response = await axios.post(
-                "http://localhost:4000/api/product/create",
-                {
-                    name: name,
-                }
-            );
-
-            console.log(
-                "CREATE PRODUCT RESPONSE:",
-                response.data
-            );
+            const response = editId
+                ? await axios.put(
+                    `http://localhost:4000/api/product/${editId}`,
+                    {
+                        name: name,
+                    }
+                )
+                : await axios.post(
+                    "http://localhost:4000/api/product/create",
+                    {
+                        name: name,
+                    }
+                );
 
             if (
                 response.data.status ||
@@ -182,10 +187,12 @@ console.log(params,"hghrthrhrtrhtth")
             ) {
                 setMessage(
                     response.data.message ||
-                    "Product created successfully"
+                    (editId
+                        ? "Product updated successfully"
+                        : "Product created successfully")
                 );
 
-                setProductName("");
+                resetForm();
                 setShowForm(false);
 
                 // Go to first page
@@ -200,22 +207,85 @@ console.log(params,"hghrthrhrtrhtth")
             } else {
                 setError(
                     response.data.message ||
-                    "Failed to create product"
+                    "Failed to save product"
                 );
             }
         } catch (err) {
             console.error(
-                "Create product error:",
+                "Save product error:",
                 err
             );
 
             setError(
                 err.response?.data?.message ||
-                "Failed to create product"
+                "Failed to save product"
             );
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleEdit = (product) => {
+        setEditId(product.id);
+        setProductName(product.name || "");
+        setShowForm(true);
+        setMessage("");
+        setError("");
+
+        window.scrollTo({
+            top: 0,
+            behavior: "smooth",
+        });
+    };
+
+    const handleDelete = async (id) => {
+        const confirmDelete = window.confirm(
+            "Are you sure you want to delete this product?"
+        );
+
+        if (!confirmDelete) {
+            return;
+        }
+
+        try {
+            setMessage("");
+            setError("");
+
+            const response = await axios.delete(
+                `http://localhost:4000/api/product/${id}`
+            );
+
+            if (response.data.status || response.data.success) {
+                setMessage(
+                    response.data.message ||
+                    "Product deleted successfully"
+                );
+
+                if (editId === id) {
+                    resetForm();
+                    setShowForm(false);
+                }
+
+                await getProducts(
+                    page,
+                    limit,
+                    debouncedSearch
+                );
+            }
+        } catch (err) {
+            console.error("Delete product error:", err);
+
+            setError(
+                err.response?.data?.message ||
+                "Failed to delete product"
+            );
+        }
+    };
+
+    const handleCancel = () => {
+        resetForm();
+        setShowForm(false);
+        setError("");
     };
 
     // ============================
@@ -263,10 +333,7 @@ console.log(params,"hghrthrhrtrhtth")
                     type="button"
                     className="btn btn-sm btn-outline-primary me-2"
                     onClick={() => {
-                        console.log(
-                            "Edit:",
-                            product
-                        );
+                        handleEdit(product);
                     }}
                 >
                     Edit
@@ -276,10 +343,7 @@ console.log(params,"hghrthrhrtrhtth")
                     type="button"
                     className="btn btn-sm btn-outline-danger"
                     onClick={() => {
-                        console.log(
-                            "Delete:",
-                            product
-                        );
+                        handleDelete(product.id);
                     }}
                 >
                     Delete
@@ -324,7 +388,13 @@ console.log(params,"hghrthrhrtrhtth")
                     type="button"
                     className="btn btn-primary"
                     onClick={() => {
-                        setShowForm(!showForm);
+                        if (showForm) {
+                            handleCancel();
+                            return;
+                        }
+
+                        resetForm();
+                        setShowForm(true);
                         setMessage("");
                         setError("");
                     }}
@@ -359,7 +429,7 @@ console.log(params,"hghrthrhrtrhtth")
 
                     <div className="card-header bg-white">
                         <h5 className="mb-0">
-                            Add Product
+                            {editId ? "Edit Product" : "Add Product"}
                         </h5>
                     </div>
 
@@ -367,7 +437,7 @@ console.log(params,"hghrthrhrtrhtth")
 
                         <form
                             onSubmit={
-                                handleAddProduct
+                                handleSaveProduct
                             }
                         >
 
@@ -406,22 +476,16 @@ console.log(params,"hghrthrhrtrhtth")
                                     >
                                         {loading
                                             ? "Saving..."
-                                            : "Save Product"}
+                                            : editId
+                                                ? "Update Product"
+                                                : "Save Product"}
                                     </button>
 
                                     <button
                                         type="button"
                                         className="btn btn-secondary"
                                         onClick={() => {
-                                            setShowForm(
-                                                false
-                                            );
-                                            setProductName(
-                                                ""
-                                            );
-                                            setError(
-                                                ""
-                                            );
+                                            handleCancel();
                                         }}
                                     >
                                         Cancel
