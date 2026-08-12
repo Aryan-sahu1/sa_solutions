@@ -1,17 +1,17 @@
 const db = require("../config/db");
 
 const getVehicleNo = (body) => {
-    return body.vehicle_no || body.vehicleNo;
+    return body.name || body.name;
 };
 
 const create = async (body, userId) => {
+    console.log(body,"body")
     const sql = `
-        INSERT INTO vehicle_master (name, vehicle_no, balance, sid, cid)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO vehicle_master (name, balance, sid, cid)
+        VALUES (?, ?, ?, ?)
     `;
 
-    const [result] = await db.query(sql, [
-        body.name,
+    const [result] = await db.query(sql, [ 
         getVehicleNo(body),
         body.balance,
         body.sid,
@@ -21,31 +21,34 @@ const create = async (body, userId) => {
     return result;
 };
 
-const findAll = async ({ userId, page = 1, limit = 10, search = "" } = {}) => {
+const findAll = async ({ userId, page = 1, limit = 10, search = "", sid = "" } = {}) => {
     const offset = (page - 1) * limit;
 
     let where = `WHERE vm.deleted_at IS NULL AND vm.cid = ?`;
     const params = [userId];
 
+    if (sid && String(sid).trim() !== "") {
+        where += ` AND vm.sid = ?`;
+        params.push(sid);
+    }
+
     if (search && String(search).trim() !== "") {
         where += `
             AND (
-                vm.name LIKE ?
-                OR vm.vehicle_no LIKE ?
+                vm.name LIKE ? 
                 OR vm.balance LIKE ?
                 OR p.name LIKE ?
             )
         `;
         const searchTerm = `%${String(search).trim()}%`;
-        params.push(searchTerm, searchTerm, searchTerm, searchTerm);
+        console.log(searchTerm,"searchTerm")
+        params.push(searchTerm, searchTerm, searchTerm);
     }
 
     const dataSql = `
         SELECT
             vm.id,
-            vm.name,
-            vm.vehicle_no,
-            vm.vehicle_no AS vehicleNo,
+            vm.name, 
             vm.balance,
             vm.sid,
             vm.cid,

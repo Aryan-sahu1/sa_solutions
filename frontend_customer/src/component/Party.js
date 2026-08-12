@@ -498,7 +498,7 @@ const Party = () => {
                                         value={formData.sid}
                                         onChange={handleChange}
                                     >
-                                        <option value="">Select head</option>
+                                
                                         {headMasters.map((head) => (
                                             <option key={head.id} value={head.id}>
                                                 {head.name}
@@ -517,7 +517,7 @@ const Party = () => {
                                         value={formData.sid1}
                                         onChange={handleChange}
                                     >
-                                        <option value="">Select T head</option>
+                                     
                                         {tHeadMasters.map((head) => (
                                             <option key={head.id} value={head.id}>
                                                 {head.name}

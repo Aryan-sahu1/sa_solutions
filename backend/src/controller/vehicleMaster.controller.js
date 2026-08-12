@@ -19,12 +19,14 @@ const findAll = async (req, res, next) => {
         const page = Number(req.query.page) || 1;
         const limit = Number(req.query.limit) || 10;
         const search = req.query.search || "";
+        const sid = req.query.sid || "";
 
         const result = await vehicleMasterService.findAll({
             userId: req.user.id,
             page,
             limit,
-            search
+            search,
+            sid
         });
 
         return res.status(200).json({

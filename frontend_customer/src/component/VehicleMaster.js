@@ -5,10 +5,8 @@ import { Column } from "primereact/column";
 import { useAuth } from "../context/AuthContext";
 
 const initialFormData = {
-    name: "",
-    vehicle_no: "",
+    name: "", 
     balance: "",
-    sid: "",
 };
 
 const toInputValue = (value) => {
@@ -23,6 +21,7 @@ const VehicleMaster = () => {
     const { authHeaders } = useAuth();
     const [vehicles, setVehicles] = useState([]);
     const [parties, setParties] = useState([]);
+    const [selectedPartyId, setSelectedPartyId] = useState("");
     const [formData, setFormData] = useState(initialFormData);
     const [showForm, setShowForm] = useState(false);
     const [editId, setEditId] = useState(null);
@@ -63,6 +62,10 @@ const VehicleMaster = () => {
                     params.search = currentSearch;
                 }
 
+                if (selectedPartyId) {
+                    params.sid = selectedPartyId;
+                }
+
                 const response = await axios.get(
                     "http://localhost:4000/api/vehicle-master",
                     {
@@ -98,10 +101,14 @@ const VehicleMaster = () => {
                 setListLoading(false);
             }
         },
-        [authHeaders]
+        [authHeaders, selectedPartyId]
     );
 
     const getParties = useCallback(async () => {
+        if (!authHeaders.Authorization) {
+            return;
+        }
+
         try {
             const response = await axios.get(
                 "http://localhost:4000/api/party",
@@ -132,7 +139,7 @@ const VehicleMaster = () => {
 
     useEffect(() => {
         getVehicles(page, limit, debouncedSearch);
-    }, [page, limit, debouncedSearch, getVehicles]);
+    }, [page, limit, debouncedSearch, selectedPartyId, getVehicles]);
 
     const resetForm = () => {
         setFormData(initialFormData);
@@ -148,7 +155,19 @@ const VehicleMaster = () => {
         }));
     };
 
+    const handlePartyChange = (e) => {
+        setSelectedPartyId(e.target.value);
+        setPage(1);
+        setMessage("");
+        setError("");
+    };
+
     const handleAdd = async () => {
+        if (!selectedPartyId) {
+            setError("Please select party first");
+            return;
+        }
+
         resetForm();
         await getParties();
         setShowForm(true);
@@ -168,18 +187,14 @@ const VehicleMaster = () => {
         setError("");
 
         const payload = {
-            name: toInputValue(formData.name).trim(),
-            vehicle_no: toInputValue(formData.vehicle_no).trim(),
+            name: toInputValue(formData.vehicle_no).trim(), 
             balance: toInputValue(formData.balance).trim(),
-            sid: formData.sid,
+            sid: selectedPartyId,
         };
 
-        if (!payload.name) {
-            setError("Name is required");
-            return;
-        }
+        console.log(payload,"lllll")
 
-        if (!payload.vehicle_no) {
+        if (!payload.name) {
             setError("Vehicle no is required");
             return;
         }
@@ -245,12 +260,11 @@ const VehicleMaster = () => {
 
     const handleEdit = (vehicle) => {
         setEditId(vehicle.id);
-        setFormData({
-            name: toInputValue(vehicle.name),
+        setFormData({ 
             vehicle_no: toInputValue(vehicle.vehicle_no || vehicle.vehicleNo),
             balance: toInputValue(vehicle.balance),
-            sid: toInputValue(vehicle.sid),
         });
+        setSelectedPartyId(toInputValue(vehicle.sid));
         setShowForm(true);
         setMessage("");
         setError("");
@@ -329,9 +343,7 @@ const VehicleMaster = () => {
         return date.toLocaleString();
     };
 
-    const partyBodyTemplate = (row) => {
-        return row.party_name || "-";
-    };
+   
 
     const actionBodyTemplate = (row) => {
         return (
@@ -403,21 +415,9 @@ const VehicleMaster = () => {
                     <div className="card-body">
                         <form onSubmit={handleSubmit}>
                             <div className="row g-3 align-items-end">
-                                <div className="col-md-3">
-                                    <label className="form-label fw-semibold">
-                                        Name
-                                    </label>
-                                    <input
-                                        type="text"
-                                        className="form-control"
-                                        name="name"
-                                        placeholder="Enter vehicle name"
-                                        value={formData.name}
-                                        onChange={handleChange}
-                                    />
-                                </div>
+                                
 
-                                <div className="col-md-3">
+                                <div className="col-md-4">
                                     <label className="form-label fw-semibold">
                                         Vehicle No
                                     </label>
@@ -431,7 +431,7 @@ const VehicleMaster = () => {
                                     />
                                 </div>
 
-                                <div className="col-md-2">
+                                <div className="col-md-4">
                                     <label className="form-label fw-semibold">
                                         Balance
                                     </label>
@@ -443,25 +443,6 @@ const VehicleMaster = () => {
                                         value={formData.balance}
                                         onChange={handleChange}
                                     />
-                                </div>
-
-                                <div className="col-md-4">
-                                    <label className="form-label fw-semibold">
-                                        Party
-                                    </label>
-                                    <select
-                                        className="form-select"
-                                        name="sid"
-                                        value={formData.sid}
-                                        onChange={handleChange}
-                                    >
-                                        <option value="">Select party</option>
-                                        {parties.map((party) => (
-                                            <option key={party.id} value={party.id}>
-                                                {party.name || `Party #${party.id}`}
-                                            </option>
-                                        ))}
-                                    </select>
                                 </div>
 
                                 <div className="col-12">
@@ -494,11 +475,25 @@ const VehicleMaster = () => {
             <div className="card shadow-sm border-0">
                 <div className="card-header bg-white p-3">
                     <div className="row align-items-center">
-                        <div className="col-md-6">
+                        <div className="col-md-4">
                             <h5 className="mb-0">Vehicle List</h5>
                         </div>
 
-                        <div className="col-md-6 mt-3 mt-md-0">
+                        <div className="col-md-4 mt-3 mt-md-0">
+                            <select
+                                className="form-select"
+                                value={selectedPartyId}
+                                onChange={handlePartyChange}
+                            > 
+                                {parties.map((party) => (
+                                    <option key={party.id} value={party.id}>
+                                        {party.name || `Party #${party.id}`}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="col-md-4 mt-3 mt-md-0">
                             <input
                                 type="text"
                                 className="form-control"
@@ -522,7 +517,7 @@ const VehicleMaster = () => {
                         rowsPerPageOptions={[5, 10, 20, 50]}
                         onPage={handlePageChange}
                         responsiveLayout="scroll"
-                        tableStyle={{ minWidth: "64rem" }}
+                        tableStyle={{ minWidth: "500px" }, { maxWidth: "500px" }}
                         emptyMessage={
                             debouncedSearch
                                 ? "No vehicles found for this search"
@@ -544,21 +539,17 @@ const VehicleMaster = () => {
                         <Column
                             header="#"
                             body={serialNumberTemplate}
-                            style={{ width: "80px" }}
+                            style={{ width: "5%" }}
                         />
-                        <Column field="name" header="Name" />
-                        <Column field="vehicle_no" header="Vehicle No" />
-                        <Column field="balance" header="Balance" />
-                        <Column header="Party" body={partyBodyTemplate} />
-                        <Column
-                            field="created_at"
-                            header="Created At"
-                            body={dateBodyTemplate}
-                        />
+                        <Column field="name" header="Vehicle No"
+                          style={{ width: "15%" }} /> 
+                        <Column field="balance" header="Balance"
+                        style={{ width: "10%" }} /> 
+                       
                         <Column
                             header="Action"
                             body={actionBodyTemplate}
-                            style={{ width: "180px" }}
+                           style={{ width: "15%" }}
                         />
                     </DataTable>
                 </div>

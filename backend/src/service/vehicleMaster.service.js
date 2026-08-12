@@ -8,15 +8,12 @@ const createError = (message, statusCode = 400) => {
 };
 
 const validateVehicle = (body) => {
-    const vehicleNo = body.vehicle_no || body.vehicleNo;
+ 
 
     if (!body.name) {
         throw createError("name is required");
     }
-
-    if (!vehicleNo) {
-        throw createError("vehicle_no is required");
-    }
+ 
 
     if (body.balance === undefined || body.balance === null || body.balance === "") {
         throw createError("balance is required");
@@ -57,7 +54,8 @@ const findAll = async (options = {}) => {
         userId: options.userId,
         page,
         limit,
-        search: options.search || ""
+        search: options.search || "",
+        sid: options.sid || ""
     });
 };
 
