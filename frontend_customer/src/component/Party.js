@@ -106,8 +106,12 @@ const Party = () => {
     );
 
     const getHeadOptions = useCallback(async () => {
+        if (!authHeaders.Authorization) {
+            return;
+        }
+
         try {
-            const [headResponse, tHeadResponse] = await Promise.all([
+            const [headResult, tHeadResult] = await Promise.allSettled([
                 axios.get("http://localhost:4000/api/head-master", {
                     params: {
                         page: 1,
@@ -124,12 +128,24 @@ const Party = () => {
                 }),
             ]);
 
-            if (headResponse.data.status) {
+            if (
+                headResult.status === "fulfilled" &&
+                headResult.value.data.status
+            ) {
+                const headResponse = headResult.value;
                 setHeadMasters(headResponse.data.data || []);
+            } else {
+                setHeadMasters([]);
             }
 
-            if (tHeadResponse.data.status) {
+            if (
+                tHeadResult.status === "fulfilled" &&
+                tHeadResult.value.data.status
+            ) {
+                const tHeadResponse = tHeadResult.value;
                 setTHeadMasters(tHeadResponse.data.data || []);
+            } else {
+                setTHeadMasters([]);
             }
         } catch (err) {
             console.error("Party head option error:", err);
@@ -485,7 +501,7 @@ const Party = () => {
                                         <option value="">Select head</option>
                                         {headMasters.map((head) => (
                                             <option key={head.id} value={head.id}>
-                                                {head.name} ({head.head_type})
+                                                {head.name}
                                             </option>
                                         ))}
                                     </select>
@@ -504,7 +520,7 @@ const Party = () => {
                                         <option value="">Select T head</option>
                                         {tHeadMasters.map((head) => (
                                             <option key={head.id} value={head.id}>
-                                                {head.name} ({head.head_type})
+                                                {head.name}
                                             </option>
                                         ))}
                                     </select>

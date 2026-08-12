@@ -1,38 +1,34 @@
 const db = require("../config/db");
 
-const create = async (body, userId) => {
+const create = async (body) => {
     const sql = `
-        INSERT INTO t_head_master (cid, name, head_type)
-        VALUES (?, ?, ?)
+        INSERT INTO t_head_master (name)
+        VALUES (?)
     `;
 
     const [result] = await db.query(sql, [
-        userId,
-        body.name,
-        body.head_type
+        body.name
     ]);
 
     return result;
 };
 
-const findAll = async ({ userId, page = 1, limit = 10, search = "" } = {}) => {
+const findAll = async ({ page = 1, limit = 10, search = "" } = {}) => {
     const offset = (page - 1) * limit;
 
-    let where = `WHERE deleted_at IS NULL AND cid = ?`;
-    const params = [userId];
+    let where = `WHERE deleted_at IS NULL`;
+    const params = [];
 
     if (search && String(search).trim() !== "") {
-        where += ` AND (name LIKE ? OR head_type LIKE ?)`;
+        where += ` AND name LIKE ?`;
         const searchTerm = `%${String(search).trim()}%`;
-        params.push(searchTerm, searchTerm);
+        params.push(searchTerm);
     }
 
     const dataSql = `
         SELECT
             id,
-            cid,
             name,
-            head_type,
             created_at,
             updated_at,
             deleted_at
@@ -71,57 +67,49 @@ const findAll = async ({ userId, page = 1, limit = 10, search = "" } = {}) => {
     };
 };
 
-const findById = async (id, userId) => {
+const findById = async (id) => {
     const sql = `
         SELECT
             id,
-            cid,
             name,
-            head_type,
             created_at,
             updated_at,
             deleted_at
         FROM t_head_master
         WHERE id = ?
-        AND cid = ?
         AND deleted_at IS NULL
     `;
 
-    const [rows] = await db.query(sql, [id, userId]);
+    const [rows] = await db.query(sql, [id]);
 
     return rows[0] || null;
 };
 
-const update = async (id, body, userId) => {
+const update = async (id, body) => {
     const sql = `
         UPDATE t_head_master
-        SET name = ?,
-            head_type = ?
+        SET name = ?
         WHERE id = ?
-        AND cid = ?
         AND deleted_at IS NULL
     `;
 
     const [result] = await db.query(sql, [
         body.name,
-        body.head_type,
-        id,
-        userId
+        id
     ]);
 
     return result;
 };
 
-const remove = async (id, userId) => {
+const remove = async (id) => {
     const sql = `
         UPDATE t_head_master
         SET deleted_at = CURRENT_TIMESTAMP
         WHERE id = ?
-        AND cid = ?
         AND deleted_at IS NULL
     `;
 
-    const [result] = await db.query(sql, [id, userId]);
+    const [result] = await db.query(sql, [id]);
 
     return result;
 };

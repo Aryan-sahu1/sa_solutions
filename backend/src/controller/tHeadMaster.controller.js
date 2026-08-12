@@ -2,7 +2,7 @@ const tHeadMasterService = require("../service/tHeadMaster.service");
 
 const create = async (req, res, next) => {
     try {
-        const result = await tHeadMasterService.create(req.body, req.user.id);
+        const result = await tHeadMasterService.create(req.body);
 
         return res.status(201).json({
             status: true,
@@ -21,7 +21,6 @@ const findAll = async (req, res, next) => {
         const search = req.query.search || "";
 
         const result = await tHeadMasterService.findAll({
-            userId: req.user.id,
             page,
             limit,
             search
@@ -40,10 +39,7 @@ const findAll = async (req, res, next) => {
 
 const findById = async (req, res, next) => {
     try {
-        const data = await tHeadMasterService.findById(
-            req.params.id,
-            req.user.id
-        );
+        const data = await tHeadMasterService.findById(req.params.id);
 
         return res.status(200).json({
             status: true,
@@ -59,8 +55,7 @@ const update = async (req, res, next) => {
     try {
         const data = await tHeadMasterService.update(
             req.params.id,
-            req.body,
-            req.user.id
+            req.body
         );
 
         return res.status(200).json({
@@ -75,7 +70,7 @@ const update = async (req, res, next) => {
 
 const remove = async (req, res, next) => {
     try {
-        await tHeadMasterService.remove(req.params.id, req.user.id);
+        await tHeadMasterService.remove(req.params.id);
 
         return res.status(200).json({
             status: true,

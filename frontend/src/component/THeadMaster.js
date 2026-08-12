@@ -2,14 +2,12 @@ import React, { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
-import { useAuth } from "../context/AuthContext";
 
 const initialFormData = {
     name: "",
 };
 
 const THeadMaster = () => {
-    const { authHeaders } = useAuth();
     const [heads, setHeads] = useState([]);
     const [formData, setFormData] = useState(initialFormData);
     const [showForm, setShowForm] = useState(false);
@@ -26,6 +24,10 @@ const THeadMaster = () => {
     const [page, setPage] = useState(1);
     const [limit, setLimit] = useState(5);
     const [totalRecords, setTotalRecords] = useState(0);
+
+    const getAuthHeaders = () => ({
+        Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+    });
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -56,7 +58,7 @@ const THeadMaster = () => {
                     {
                         params,
                         headers: {
-                            ...authHeaders,
+                            ...getAuthHeaders(),
                             "Cache-Control": "no-cache",
                             Pragma: "no-cache",
                         },
@@ -65,9 +67,7 @@ const THeadMaster = () => {
 
                 if (response.data.status) {
                     setHeads(response.data.data || []);
-                    setTotalRecords(
-                        Number(response.data.pagination?.total || 0)
-                    );
+                    setTotalRecords(Number(response.data.pagination?.total || 0));
                     return;
                 }
 
@@ -86,7 +86,7 @@ const THeadMaster = () => {
                 setListLoading(false);
             }
         },
-        [authHeaders]
+        []
     );
 
     useEffect(() => {
@@ -139,7 +139,7 @@ const THeadMaster = () => {
 
             const config = {
                 headers: {
-                    ...authHeaders,
+                    ...getAuthHeaders(),
                     "Content-Type": "application/json",
                 },
             };
@@ -214,7 +214,7 @@ const THeadMaster = () => {
             const response = await axios.delete(
                 `http://localhost:4000/api/t-head-master/${id}`,
                 {
-                    headers: authHeaders,
+                    headers: getAuthHeaders(),
                 }
             );
 

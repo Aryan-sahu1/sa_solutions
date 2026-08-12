@@ -1,10 +1,10 @@
 const express = require("express");
 const tHeadMasterController = require("../controller/tHeadMaster.controller");
-const customerAuthMiddleware = require("../middleware/customer.auth.middleware");
+const companyOrCustomerAuthMiddleware = require("../middleware/companyOrCustomer.auth.middleware");
 
 const router = express.Router();
 
-router.use(customerAuthMiddleware);
+router.use(companyOrCustomerAuthMiddleware);
 
 router.post("/", tHeadMasterController.create);
 router.get("/", tHeadMasterController.findAll);

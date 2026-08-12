@@ -9,11 +9,13 @@ import {
     FaSignOutAlt,
     FaBars,
     FaTimes,
+    FaLayerGroup,
 } from "react-icons/fa";
 
 const menuItems = [
     { to: "/dashboard", label: "Dashboard", icon: <FaTachometerAlt /> },
     { to: "/product", label: "Create Product", icon: <FaBoxOpen /> },
+    { to: "/t-head-master", label: "T Head Master", icon: <FaLayerGroup /> },
     { to: "/staff", label: "Staff Category", icon: <FaUserTie /> },
     { to: "/customers", label: "Create Customer", icon: <FaUsers /> },
     { to: "/change-password", label: "Change Password", icon: <FaKey /> },

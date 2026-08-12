@@ -26,7 +26,6 @@ const menuItems = [
             { to: "/stock-item", label: "Stock Item", icon: <FaUserTie /> },
             { to: "/staff-member", label: "Staff", icon: <FaUserTie /> },
             { to: "/head-master", label: "Head Master", icon: <FaUsers /> },
-            { to: "/t-head-master", label: "T Head Master", icon: <FaUsers /> },
             { to: "/party", label: "Party", icon: <FaUsers /> },
             { to: "/vehicle-master", label: "Vehicle", icon: <FaUsers /> },
         ],

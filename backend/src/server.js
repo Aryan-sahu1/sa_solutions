@@ -19,4 +19,3 @@ async function startServer() {
 }
 
 startServer();
-app.listen(PORT);

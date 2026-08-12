@@ -15,7 +15,6 @@ import ProtectedRoute from "./ProtectedRoute/ProtectedRoute";
 import ChangePassword from "./component/ChangePassword";
 // import Product from "./component/Product";
 import HeadMaster from "./component/HeadMaster";
-import THeadMaster from "./component/THeadMaster";
 import Party from "./component/Party";
 import ProductCategory from "./component/ProductCategory";
 import StockItem from "./component/StockItem";
@@ -73,11 +72,6 @@ const App = () => {
                         <Route
                             path="/head-master"
                             element={<HeadMaster />}
-                        />
-
-                        <Route
-                            path="/t-head-master"
-                            element={<THeadMaster />}
                         />
 
                         <Route

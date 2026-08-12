@@ -14,6 +14,7 @@ import Staff from "./component/Staff";
 import Customers from "./component/Customers";
 import ChangePassword from "./component/ChangePassword";
 import Product from "./component/Product";
+import THeadMaster from "./component/THeadMaster";
 
  
 
@@ -56,9 +57,14 @@ const App = () => {
                         element={<ChangePassword />}
                     />
 
-                      <Route
+                    <Route
                         path="/product"
                         element={<Product />}
+                    />
+
+                    <Route
+                        path="/t-head-master"
+                        element={<THeadMaster />}
                     />
                 </Route>
 

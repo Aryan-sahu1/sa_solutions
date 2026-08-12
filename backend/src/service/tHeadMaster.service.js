@@ -1,15 +1,11 @@
 const tHeadMasterRepository = require("../repository/tHeadMaster.repository");
 
-const create = async (body, userId) => {
+const create = async (body) => {
     if (!body.name) {
         throw new Error("name is required");
     }
 
-    if (!body.head_type) {
-        throw new Error("head_type is required");
-    }
-
-    return await tHeadMasterRepository.create(body, userId);
+    return await tHeadMasterRepository.create(body);
 };
 
 const findAll = async (options = {}) => {
@@ -20,15 +16,14 @@ const findAll = async (options = {}) => {
     if (limit < 1) limit = 10;
 
     return await tHeadMasterRepository.findAll({
-        userId: options.userId,
         page,
         limit,
         search: options.search || ""
     });
 };
 
-const findById = async (id, userId) => {
-    const data = await tHeadMasterRepository.findById(id, userId);
+const findById = async (id) => {
+    const data = await tHeadMasterRepository.findById(id);
 
     if (!data) {
         throw new Error("T head master not found");
@@ -37,34 +32,30 @@ const findById = async (id, userId) => {
     return data;
 };
 
-const update = async (id, body, userId) => {
+const update = async (id, body) => {
     if (!body.name) {
         throw new Error("name is required");
     }
 
-    if (!body.head_type) {
-        throw new Error("head_type is required");
-    }
-
-    const existingData = await tHeadMasterRepository.findById(id, userId);
+    const existingData = await tHeadMasterRepository.findById(id);
 
     if (!existingData) {
         throw new Error("T head master not found");
     }
 
-    await tHeadMasterRepository.update(id, body, userId);
+    await tHeadMasterRepository.update(id, body);
 
-    return await tHeadMasterRepository.findById(id, userId);
+    return await tHeadMasterRepository.findById(id);
 };
 
-const remove = async (id, userId) => {
-    const existingData = await tHeadMasterRepository.findById(id, userId);
+const remove = async (id) => {
+    const existingData = await tHeadMasterRepository.findById(id);
 
     if (!existingData) {
         throw new Error("T head master not found");
     }
 
-    await tHeadMasterRepository.remove(id, userId);
+    await tHeadMasterRepository.remove(id);
 
     return true;
 };

@@ -75,8 +75,7 @@ const findAll = async ({ userId, page = 1, limit = 10, search = "" } = {}) => {
             p.deleted_at,
             hm.name AS head_master_name,
             hm.head_type AS head_master_type,
-            thm.name AS t_head_master_name,
-            thm.head_type AS t_head_master_type
+            thm.name AS t_head_master_name
         FROM party p
         LEFT JOIN head_master hm
             ON hm.id = p.sid
@@ -84,7 +83,6 @@ const findAll = async ({ userId, page = 1, limit = 10, search = "" } = {}) => {
             AND hm.deleted_at IS NULL
         LEFT JOIN t_head_master thm
             ON thm.id = p.sid1
-            AND thm.cid = p.cid
             AND thm.deleted_at IS NULL
         ${where}
         ORDER BY p.id DESC
@@ -100,7 +98,6 @@ const findAll = async ({ userId, page = 1, limit = 10, search = "" } = {}) => {
             AND hm.deleted_at IS NULL
         LEFT JOIN t_head_master thm
             ON thm.id = p.sid1
-            AND thm.cid = p.cid
             AND thm.deleted_at IS NULL
         ${where}
     `;
@@ -145,8 +142,7 @@ const findById = async (id, userId) => {
             p.deleted_at,
             hm.name AS head_master_name,
             hm.head_type AS head_master_type,
-            thm.name AS t_head_master_name,
-            thm.head_type AS t_head_master_type
+            thm.name AS t_head_master_name
         FROM party p
         LEFT JOIN head_master hm
             ON hm.id = p.sid
@@ -154,7 +150,6 @@ const findById = async (id, userId) => {
             AND hm.deleted_at IS NULL
         LEFT JOIN t_head_master thm
             ON thm.id = p.sid1
-            AND thm.cid = p.cid
             AND thm.deleted_at IS NULL
         WHERE p.id = ?
         AND p.cid = ?
