@@ -20,6 +20,7 @@ import Party from "./component/Party";
 import ProductCategory from "./component/ProductCategory";
 import StockItem from "./component/StockItem";
 import StaffMember from "./component/StaffMember";
+import VehicleMaster from "./component/VehicleMaster";
 import { AuthProvider } from "./context/AuthContext";
 
  
@@ -97,6 +98,11 @@ const App = () => {
                         <Route
                             path="/staff-member"
                             element={<StaffMember />}
+                        />
+
+                        <Route
+                            path="/vehicle-master"
+                            element={<VehicleMaster />}
                         />
                     </Route>
 
