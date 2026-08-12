@@ -14,11 +14,21 @@ const create = async (body) => {
     return result;
 };
 
-const findAll = async ({ limit = 10, page = 1, search = "" } = {}) => {
+const findAll = async ({
+    limit = 10,
+    page = 1,
+    search = "",
+    productId = ""
+} = {}) => {
     const offset = (page - 1) * limit;
 
     let where = `WHERE sc.deleted_at IS NULL`;
     const params = [];
+
+    if (productId && String(productId).trim() !== "") {
+        where += ` AND sc.product_id = ?`;
+        params.push(productId);
+    }
 
     if (search && String(search).trim().length) {
         where += ` AND (sc.name LIKE ? OR p.name LIKE ?)`;

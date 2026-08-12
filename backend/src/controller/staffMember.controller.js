@@ -2,7 +2,14 @@ const staffMemberService = require("../service/staffMember.service");
 
 const create = async (req, res, next) => {
     try {
-        const result = await staffMemberService.create(req.body, req.user.id);
+        console.log( req.body,
+            req.user.id,
+            req.customer,"kkkkkkkkkkkkkkkkkkk")
+        const result = await staffMemberService.create(
+            req.body,
+            req.user.id,
+            req.customer
+        );
 
         return res.status(201).json({
             status: true,
@@ -60,7 +67,8 @@ const update = async (req, res, next) => {
         const data = await staffMemberService.update(
             req.params.id,
             req.body,
-            req.user.id
+            req.user.id,
+            req.customer
         );
 
         return res.status(200).json({

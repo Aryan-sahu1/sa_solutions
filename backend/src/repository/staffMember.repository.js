@@ -23,9 +23,9 @@ const findAll = async ({ userId, page = 1, limit = 10, search = "" } = {}) => {
     const params = [userId];
 
     if (search && String(search).trim() !== "") {
-        where += ` AND (s.name LIKE ? OR p.name LIKE ?)`;
+        where += ` AND (s.name LIKE ? OR sc.name LIKE ? OR p.name LIKE ?)`;
         const searchTerm = `%${String(search).trim()}%`;
-        params.push(searchTerm, searchTerm);
+        params.push(searchTerm, searchTerm, searchTerm);
     }
 
     const dataSql = `
@@ -37,10 +37,14 @@ const findAll = async ({ userId, page = 1, limit = 10, search = "" } = {}) => {
             s.created_at,
             s.updated_at,
             s.deleted_at,
+            sc.name AS staff_category_name,
             p.name AS product_name
         FROM staff s
+        LEFT JOIN staff_categories sc
+            ON sc.id = s.pid
+            AND sc.deleted_at IS NULL
         LEFT JOIN products p
-            ON p.id = s.pid
+            ON p.id = sc.product_id
             AND p.deleted_at IS NULL
         ${where}
         ORDER BY s.id DESC
@@ -50,8 +54,11 @@ const findAll = async ({ userId, page = 1, limit = 10, search = "" } = {}) => {
     const countSql = `
         SELECT COUNT(*) AS total
         FROM staff s
+        LEFT JOIN staff_categories sc
+            ON sc.id = s.pid
+            AND sc.deleted_at IS NULL
         LEFT JOIN products p
-            ON p.id = s.pid
+            ON p.id = sc.product_id
             AND p.deleted_at IS NULL
         ${where}
     `;
@@ -89,10 +96,14 @@ const findById = async (id, userId) => {
             s.created_at,
             s.updated_at,
             s.deleted_at,
+            sc.name AS staff_category_name,
             p.name AS product_name
         FROM staff s
+        LEFT JOIN staff_categories sc
+            ON sc.id = s.pid
+            AND sc.deleted_at IS NULL
         LEFT JOIN products p
-            ON p.id = s.pid
+            ON p.id = sc.product_id
             AND p.deleted_at IS NULL
         WHERE s.id = ?
         AND s.cid = ?

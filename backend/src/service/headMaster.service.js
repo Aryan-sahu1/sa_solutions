@@ -1,6 +1,8 @@
 const headMasterRepository = require("../repository/headMaster.repository");
 
-const create = async (body, userId) => {
+const allowedHeadTypes = ["Trading", "Profit/Loss", "Balance Sheet"];
+
+const validateHeadMaster = (body) => {
     if (!body.name) {
         throw new Error("name is required");
     }
@@ -8,6 +10,14 @@ const create = async (body, userId) => {
     if (!body.head_type) {
         throw new Error("head_type is required");
     }
+
+    if (!allowedHeadTypes.includes(body.head_type)) {
+        throw new Error("head_type must be Trading, Profit/Loss, or Balance Sheet");
+    }
+};
+
+const create = async (body, userId) => {
+    validateHeadMaster(body);
 
     return await headMasterRepository.create(body, userId);
 };
@@ -38,13 +48,7 @@ const findById = async (id, userId) => {
 };
 
 const update = async (id, body, userId) => {
-    if (!body.name) {
-        throw new Error("name is required");
-    }
-
-    if (!body.head_type) {
-        throw new Error("head_type is required");
-    }
+    validateHeadMaster(body);
 
     const existingData = await headMasterRepository.findById(id, userId);
 

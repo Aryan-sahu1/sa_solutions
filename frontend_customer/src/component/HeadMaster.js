@@ -9,6 +9,8 @@ const initialFormData = {
     head_type: "",
 };
 
+const headTypeOptions = ["Trading", "Profit/Loss", "Balance Sheet"];
+
 const HeadMaster = () => {
     const { authHeaders } = useAuth();
     const [headMasters, setHeadMasters] = useState([]);
@@ -365,14 +367,19 @@ const HeadMaster = () => {
                                     <label className="form-label fw-semibold">
                                         Head Type
                                     </label>
-                                    <input
-                                        type="text"
-                                        className="form-control"
+                                    <select
+                                        className="form-select"
                                         name="head_type"
-                                        placeholder="Enter head type"
                                         value={formData.head_type}
                                         onChange={handleChange}
-                                    />
+                                    >
+                                       
+                                        {headTypeOptions.map((headType) => (
+                                            <option key={headType} value={headType}>
+                                                {headType}
+                                            </option>
+                                        ))}
+                                    </select>
                                 </div>
 
                                 <div className="col-md-3 mt-3 mt-md-0">

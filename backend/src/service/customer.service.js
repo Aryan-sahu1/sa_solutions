@@ -1,23 +1,41 @@
 const customerRepository = require("../repository/customer.repository");
 const bcrypt = require("bcrypt")
 const {generateToken} = require("../utils/jwt")
+
+const createError = (message, statusCode = 400) => {
+    const error = new Error(message);
+    error.statusCode = statusCode;
+    return error;
+};
+
 const create = async (body) => {
     if (!body.name) {
-        throw new Error("Customer name is required");
+        throw createError("Customer name is required");
     }
 
     if (!body.username) {
-        throw new Error("Username is required");
+        throw createError("Username is required");
     }
 
     if (!body.password) {
-        throw new Error("Password is required");
+        throw createError("Password is required");
     }
+
+    if (body.password.length < 6) {
+        throw createError("Password must be at least 6 characters");
+    }
+
+    const existingCustomer = await customerRepository.findByUsername(body.username);
+
+    if (existingCustomer) {
+        throw createError("Username already exists");
+    }
+
     const hashedPassword = await bcrypt.hash(body.password, 10);
-    console.log(hashedPassword, "passwaor")
-    body.password
-        = hashedPassword
-    const result = await customerRepository.create(body);
+    const result = await customerRepository.create({
+        ...body,
+        password: hashedPassword
+    });
 
     return result;
 };
@@ -51,14 +69,27 @@ const update = async (id, body) => {
         await customerRepository.findById(id);
 
     if (!existingCustomer) {
-        throw new Error("Customer not found");
+        throw createError("Customer not found", 404);
     }
 
     if (!body.name) {
-        throw new Error("Customer name is required");
+        throw createError("Customer name is required");
     }
 
-    const result = await customerRepository.update(id, body);
+    let password = null;
+
+    if (body.password) {
+        if (body.password.length < 6) {
+            throw createError("Password must be at least 6 characters");
+        }
+
+        password = await bcrypt.hash(body.password, 10);
+    }
+
+    const result = await customerRepository.update(id, {
+        ...body,
+        password
+    });
 
     return result;
 };
@@ -81,7 +112,7 @@ const loginUser = async (username, password) => {
     const user =
         await customerRepository.findByUsername(username);
     if (!user) {
-        throw new Error("Invalid username or password");
+        throw createError("Invalid username or password", 401);
     }
 
     // Compare password
@@ -92,7 +123,7 @@ const loginUser = async (username, password) => {
         );
 
     if (!isPasswordValid) {
-        throw new Error("Invalid username or passwordfverfgr");
+        throw createError("Invalid username or password", 401);
     }
 
     // Generate JWT
@@ -120,6 +151,32 @@ const verifyCustomer = async (userId) => {
     return customer;
 };
 
+const changePassword = async (userId, currentPassword, newPassword) => {
+    const customer = await customerRepository.findByIdWithPassword(userId);
+
+    if (!customer) {
+        throw createError("Customer not found", 404);
+    }
+
+    const isPasswordValid = await bcrypt.compare(currentPassword, customer.password);
+
+    if (!isPasswordValid) {
+        throw createError("Current password is invalid", 400);
+    }
+
+    const isSamePassword = await bcrypt.compare(newPassword, customer.password);
+
+    if (isSamePassword) {
+        throw createError("New password must be different from current password", 400);
+
+    }
+
+    const hashNewPassword = await bcrypt.hash(newPassword, 10);
+    await customerRepository.updatePassword(userId, hashNewPassword);
+
+    return true;
+
+}
 
 
 module.exports = {
@@ -129,5 +186,6 @@ module.exports = {
     update,
     remove,
     loginUser,
-    verifyCustomer
+    verifyCustomer,
+    changePassword
 };

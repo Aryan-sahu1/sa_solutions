@@ -45,6 +45,36 @@ const findAll = async (req, res,next) => {
     }
 };
 
+const findByCustomerProduct = async (req, res, next) => {
+    try {
+        const { limit, page, search } = req.query;
+
+        const options = {
+            limit: parseInt(limit, 10) || 1000,
+            page: parseInt(page, 10) || 1,
+            search: search ? String(search) : "",
+            productId: req.customer?.product_id
+        };
+
+        const result = await staffCategoryService.findAll(options);
+        const totalPages = Math.ceil(result.total / options.limit);
+
+        return res.status(200).json({
+            status: true,
+            message: "Staff categories fetched successfully",
+            data: result.rows,
+            pagination: {
+                total: result.total || 0,
+                page: options.page,
+                limit: options.limit,
+                totalPages
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 const findById = async (req, res,next) => {
     try {
         const { id } = req.params;
@@ -102,6 +132,7 @@ const remove = async (req, res,next) => {
 module.exports = {
     create,
     findAll,
+    findByCustomerProduct,
     findById,
     update,
     remove

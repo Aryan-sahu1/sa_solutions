@@ -2,49 +2,114 @@ const db = require("../config/db");
 
 const create = async (body, userId) => {
     const sql = `
-        INSERT INTO stock_item (name, cid, inLtr)
-        VALUES (?, ?, ?)
+        INSERT INTO stock_item (
+            name,
+            inLtr,
+            pid,
+            measure_unit,
+            o_quantity,
+            o_rate,
+            gst,
+            gst_code,
+            cid
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const [result] = await db.query(sql, [
         body.name,
-        userId,
-        body.inLtr
+        body.inLtr || null,
+        body.pid || 0,
+        body.measure_unit || null,
+        body.o_quantity || null,
+        body.o_rate || null,
+        body.gst || null,
+        body.gst_code || null,
+        userId
     ]);
 
     return result;
 };
 
-const findAll = async ({ userId, page = 1, limit = 10, search = "" } = {}) => {
+const findAll = async ({
+    userId,
+    page = 1,
+    limit = 10,
+    search = "",
+    pid = ""
+} = {}) => {
     const offset = (page - 1) * limit;
 
-    let where = `WHERE deleted_at IS NULL AND cid = ?`;
+    let where = `WHERE si.deleted_at IS NULL AND si.cid = ?`;
     const params = [userId];
 
+    if (pid && String(pid).trim() !== "") {
+        where += ` AND si.pid = ?`;
+        params.push(pid);
+    }
+
     if (search && String(search).trim() !== "") {
-        where += ` AND (name LIKE ? OR inLtr LIKE ?)`;
+        where += `
+            AND (
+                si.name LIKE ?
+                OR si.inLtr LIKE ?
+                OR pc.name LIKE ?
+                OR pc.unit LIKE ?
+                OR si.measure_unit LIKE ?
+                OR si.o_quantity LIKE ?
+                OR si.o_rate LIKE ?
+                OR si.gst LIKE ?
+                OR si.gst_code LIKE ?
+            )
+        `;
         const searchTerm = `%${String(search).trim()}%`;
-        params.push(searchTerm, searchTerm);
+        params.push(
+            searchTerm,
+            searchTerm,
+            searchTerm,
+            searchTerm,
+            searchTerm,
+            searchTerm,
+            searchTerm,
+            searchTerm,
+            searchTerm
+        );
     }
 
     const dataSql = `
         SELECT
-            id,
-            name,
-            cid,
-            inLtr,
-            created_at,
-            updated_at,
-            deleted_at
-        FROM stock_item
+            si.id,
+            si.name,
+            si.cid,
+            si.inLtr,
+            si.pid,
+            si.measure_unit,
+            si.o_quantity,
+            si.o_rate,
+            si.gst,
+            si.gst_code,
+            si.created_at,
+            si.updated_at,
+            si.deleted_at,
+            pc.name AS product_category_name,
+            pc.unit AS product_category_unit
+        FROM stock_item si
+        LEFT JOIN product_category pc
+            ON pc.id = si.pid
+            AND pc.cid = si.cid
+            AND pc.deleted_at IS NULL
         ${where}
-        ORDER BY id DESC
+        ORDER BY si.id DESC
         LIMIT ? OFFSET ?
     `;
 
     const countSql = `
         SELECT COUNT(*) AS total
-        FROM stock_item
+        FROM stock_item si
+        LEFT JOIN product_category pc
+            ON pc.id = si.pid
+            AND pc.cid = si.cid
+            AND pc.deleted_at IS NULL
         ${where}
     `;
 
@@ -74,17 +139,29 @@ const findAll = async ({ userId, page = 1, limit = 10, search = "" } = {}) => {
 const findById = async (id, userId) => {
     const sql = `
         SELECT
-            id,
-            name,
-            cid,
-            inLtr,
-            created_at,
-            updated_at,
-            deleted_at
-        FROM stock_item
-        WHERE id = ?
-        AND cid = ?
-        AND deleted_at IS NULL
+            si.id,
+            si.name,
+            si.cid,
+            si.inLtr,
+            si.pid,
+            si.measure_unit,
+            si.o_quantity,
+            si.o_rate,
+            si.gst,
+            si.gst_code,
+            si.created_at,
+            si.updated_at,
+            si.deleted_at,
+            pc.name AS product_category_name,
+            pc.unit AS product_category_unit
+        FROM stock_item si
+        LEFT JOIN product_category pc
+            ON pc.id = si.pid
+            AND pc.cid = si.cid
+            AND pc.deleted_at IS NULL
+        WHERE si.id = ?
+        AND si.cid = ?
+        AND si.deleted_at IS NULL
     `;
 
     const [rows] = await db.query(sql, [id, userId]);
@@ -96,7 +173,13 @@ const update = async (id, body, userId) => {
     const sql = `
         UPDATE stock_item
         SET name = ?,
-            inLtr = ?
+            inLtr = ?,
+            pid = ?,
+            measure_unit = ?,
+            o_quantity = ?,
+            o_rate = ?,
+            gst = ?,
+            gst_code = ?
         WHERE id = ?
         AND cid = ?
         AND deleted_at IS NULL
@@ -104,7 +187,13 @@ const update = async (id, body, userId) => {
 
     const [result] = await db.query(sql, [
         body.name,
-        body.inLtr,
+        body.inLtr || null,
+        body.pid,
+        body.measure_unit || null,
+        body.o_quantity || null,
+        body.o_rate || null,
+        body.gst || null,
+        body.gst_code || null,
         id,
         userId
     ]);

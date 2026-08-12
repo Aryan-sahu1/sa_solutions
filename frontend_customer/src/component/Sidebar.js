@@ -11,6 +11,7 @@ import {
     FaChevronDown,
     FaChevronRight,
     FaLayerGroup,
+    FaKey 
 } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext";
 
@@ -30,7 +31,7 @@ const menuItems = [
             { to: "/vehicle-master", label: "Vehicle", icon: <FaUsers /> },
         ],
     },
-    // { to: "/change-password", label: "Change Password", icon: <FaKey /> },
+    { to: "/change-password", label: "Change Password", icon: <FaKey /> },
 ];
 
 const Sidebar = () => {

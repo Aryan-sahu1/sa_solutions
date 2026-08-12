@@ -137,6 +137,40 @@ const verifyCustomer = async (req, res, next) => {
 };
 
 
+const changePassword = async (req, res, next) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({
+                status: false,
+                message:
+                    "Current password and new password are required",
+            });
+        }
+
+        if (newPassword.length < 6) {
+            return res.status(400).json({
+                status: false,
+                message:
+                    "New password must be at least 6 characters",
+            });
+        }
+
+        const userId = req.user.id;
+        await customerService.changePassword(userId, currentPassword, newPassword)
+
+        return res.status(200).json({
+            status: true,
+            message:
+                "Password updated successfully",
+        });
+    } catch (error) {
+        console.error("Change Password Error:", error);
+
+        next(error);
+    }
+}
+
 module.exports = {
     create,
     findAll,
@@ -144,5 +178,6 @@ module.exports = {
     update,
     remove,
     login,
-    verifyCustomer
+    verifyCustomer,
+    changePassword
 };

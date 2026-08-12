@@ -19,12 +19,16 @@ const findAll = async (req, res, next) => {
         const page = Number(req.query.page) || 1;
         const limit = Number(req.query.limit) || 10;
         const search = req.query.search || "";
+        const pid =
+            req.query.pid || 
+            "";
 
         const result = await stockItemService.findAll({
             userId: req.user.id,
             page,
             limit,
-            search
+            search,
+            pid
         });
 
         return res.status(200).json({

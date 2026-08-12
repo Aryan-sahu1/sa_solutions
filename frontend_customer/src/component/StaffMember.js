@@ -21,7 +21,7 @@ const toInputValue = (value) => {
 const StaffMember = () => {
     const { authHeaders } = useAuth();
     const [staffMembers, setStaffMembers] = useState([]);
-    const [products, setProducts] = useState([]);
+    const [staffCategories, setStaffCategories] = useState([]);
     const [formData, setFormData] = useState(initialFormData);
     const [showForm, setShowForm] = useState(false);
     const [editId, setEditId] = useState(null);
@@ -100,33 +100,34 @@ const StaffMember = () => {
         [authHeaders]
     );
 
-    const getProducts = useCallback(async () => {
+    const getStaffCategories = useCallback(async () => {
         try {
             const response = await axios.get(
-                "http://localhost:4000/api/product/list",
+                "http://localhost:4000/api/staff/customer-options",
                 {
                     params: {
                         page: 1,
                         limit: 1000,
                     },
+                    headers: authHeaders,
                 }
             );
 
             if (response.data.status) {
-                setProducts(response.data.data || []);
+                setStaffCategories(response.data.data || []);
             }
         } catch (err) {
-            console.error("Product option error:", err);
+            console.error("Staff category option error:", err);
             setError(
                 err.response?.data?.message ||
-                "Failed to fetch product options"
+                "Failed to fetch staff category options"
             );
         }
-    }, []);
+    }, [authHeaders]);
 
     useEffect(() => {
-        getProducts();
-    }, [getProducts]);
+        getStaffCategories();
+    }, [getStaffCategories]);
 
     useEffect(() => {
         getStaffMembers(page, limit, debouncedSearch);
@@ -176,7 +177,7 @@ const StaffMember = () => {
         }
 
         if (!payload.pid) {
-            setError("Product is required");
+            setError("Staff category is required");
             return;
         }
 
@@ -320,7 +321,7 @@ const StaffMember = () => {
     };
 
     const productBodyTemplate = (row) => {
-        return row.product_name || "-";
+        return row.staff_category_name || row.product_name || "-";
     };
 
     const actionBodyTemplate = (row) => {
@@ -409,7 +410,7 @@ const StaffMember = () => {
 
                                 <div className="col-md-4 mt-3 mt-md-0">
                                     <label className="form-label fw-semibold">
-                                        Product
+                                        Staff Category
                                     </label>
                                     <select
                                         className="form-select"
@@ -417,10 +418,10 @@ const StaffMember = () => {
                                         value={formData.pid}
                                         onChange={handleChange}
                                     >
-                                        <option value="">Select product</option>
-                                        {products.map((product) => (
-                                            <option key={product.id} value={product.id}>
-                                                {product.name}
+                                        <option value="">Select staff category</option>
+                                        {staffCategories.map((category) => (
+                                            <option key={category.id} value={category.id}>
+                                                {category.name}
                                             </option>
                                         ))}
                                     </select>
@@ -478,7 +479,7 @@ const StaffMember = () => {
                             <input
                                 type="text"
                                 className="form-control"
-                                placeholder="Search by staff or product..."
+                                placeholder="Search by staff or category..."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                             />
@@ -523,7 +524,7 @@ const StaffMember = () => {
                             style={{ width: "80px" }}
                         />
                         <Column field="name" header="Name" />
-                        <Column header="Product" body={productBodyTemplate} />
+                        <Column header="Staff Category" body={productBodyTemplate} />
                         <Column
                             field="created_at"
                             header="Created At"

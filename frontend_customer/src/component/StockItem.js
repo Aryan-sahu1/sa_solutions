@@ -7,6 +7,11 @@ import { useAuth } from "../context/AuthContext";
 const initialFormData = {
     name: "",
     inLtr: "",
+    measure_unit: "",
+    o_quantity: "",
+    o_rate: "",
+    gst: "",
+    gst_code: "",
 };
 
 const toInputValue = (value) => {
@@ -20,12 +25,15 @@ const toInputValue = (value) => {
 const StockItem = () => {
     const { authHeaders } = useAuth();
     const [items, setItems] = useState([]);
+    const [categories, setCategories] = useState([]);
     const [formData, setFormData] = useState(initialFormData);
     const [showForm, setShowForm] = useState(false);
     const [editId, setEditId] = useState(null);
 
     const [search, setSearch] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
+    debugger
+    const [categoryFilter, setCategoryFilter] = useState("");
 
     const [loading, setLoading] = useState(false);
     const [listLoading, setListLoading] = useState(false);
@@ -46,7 +54,12 @@ const StockItem = () => {
     }, [search]);
 
     const getItems = useCallback(
-        async (currentPage, currentLimit, currentSearch) => {
+        async (
+            currentPage,
+            currentLimit,
+            currentSearch,
+            currentCategoryFilter
+        ) => {
             try {
                 setListLoading(true);
                 setError("");
@@ -58,6 +71,10 @@ const StockItem = () => {
 
                 if (currentSearch) {
                     params.search = currentSearch;
+                }
+
+                if (currentCategoryFilter) {
+                    params.pid = currentCategoryFilter;
                 }
 
                 const response = await axios.get(
@@ -98,9 +115,39 @@ const StockItem = () => {
         [authHeaders]
     );
 
+    const getCategories = useCallback(async () => {
+debugger
+        try {
+            const response = await axios.get(
+                "http://localhost:4000/api/product-category",
+                {
+                    params: {
+                        page: 1,
+                        limit: 10,
+                    },
+                    headers: authHeaders,
+                }
+            );
+
+            if (response.data.status) {
+                setCategories(response.data.data || []);
+            }
+        } catch (err) {
+            console.error("Product category option error:", err);
+            setError(
+                err.response?.data?.message ||
+                "Failed to fetch product categories"
+            );
+        }
+    }, [authHeaders]);
+
     useEffect(() => {
-        getItems(page, limit, debouncedSearch);
-    }, [page, limit, debouncedSearch, getItems]);
+        getCategories();
+    }, [getCategories]);
+
+    useEffect(() => {
+        getItems(page, limit, debouncedSearch, categoryFilter);
+    }, [page, limit, debouncedSearch, categoryFilter, getItems]);
 
     const resetForm = () => {
         setFormData(initialFormData);
@@ -137,6 +184,12 @@ const StockItem = () => {
         const payload = {
             name: toInputValue(formData.name).trim(),
             inLtr: toInputValue(formData.inLtr).trim(),
+            pid: categoryFilter,
+            measure_unit: toInputValue(formData.measure_unit).trim(),
+            o_quantity: toInputValue(formData.o_quantity).trim(),
+            o_rate: toInputValue(formData.o_rate).trim(),
+            gst: toInputValue(formData.gst).trim(),
+            gst_code: toInputValue(formData.gst_code).trim(),
         };
 
         if (!payload.name) {
@@ -144,10 +197,11 @@ const StockItem = () => {
             return;
         }
 
-        if (!payload.inLtr) {
-            setError("In Ltr is required");
+        if (!payload.pid) {
+            setError("Please select product category from Stock Item List dropdown");
             return;
         }
+
 
         try {
             setLoading(true);
@@ -182,7 +236,7 @@ const StockItem = () => {
                 resetForm();
                 setShowForm(false);
                 setPage(1);
-                await getItems(1, limit, debouncedSearch);
+                await getItems(1, limit, debouncedSearch, categoryFilter);
                 return;
             }
 
@@ -203,7 +257,13 @@ const StockItem = () => {
         setFormData({
             name: toInputValue(item.name),
             inLtr: toInputValue(item.inLtr),
+            measure_unit: toInputValue(item.measure_unit),
+            o_quantity: toInputValue(item.o_quantity),
+            o_rate: toInputValue(item.o_rate),
+            gst: toInputValue(item.gst),
+            gst_code: toInputValue(item.gst_code),
         });
+        setCategoryFilter(toInputValue(item.pid));
         setShowForm(true);
         setMessage("");
         setError("");
@@ -245,7 +305,7 @@ const StockItem = () => {
                     setShowForm(false);
                 }
 
-                await getItems(page, limit, debouncedSearch);
+                await getItems(page, limit, debouncedSearch, categoryFilter);
                 return;
             }
 
@@ -351,8 +411,8 @@ const StockItem = () => {
 
                     <div className="card-body">
                         <form onSubmit={handleSubmit}>
-                            <div className="row align-items-end">
-                                <div className="col-md-5">
+                            <div className="row g-3 align-items-end">
+                                <div className="col-md-4">
                                     <label className="form-label fw-semibold">
                                         Name
                                     </label>
@@ -366,7 +426,7 @@ const StockItem = () => {
                                     />
                                 </div>
 
-                                <div className="col-md-4 mt-3 mt-md-0">
+                                <div className="col-md-4">
                                     <label className="form-label fw-semibold">
                                         In Ltr
                                     </label>
@@ -380,7 +440,79 @@ const StockItem = () => {
                                     />
                                 </div>
 
-                                <div className="col-md-3 mt-3 mt-md-0">
+                                
+
+                                <div className="col-md-4">
+                                    <label className="form-label fw-semibold">
+                                        Measure Unit
+                                    </label>
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        name="measure_unit"
+                                        placeholder="Enter measure unit"
+                                        value={formData.measure_unit}
+                                        onChange={handleChange}
+                                    />
+                                </div>
+
+                                <div className="col-md-3">
+                                    <label className="form-label fw-semibold">
+                                        Opening Quantity
+                                    </label>
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        name="o_quantity"
+                                        placeholder="Enter opening quantity"
+                                        value={formData.o_quantity}
+                                        onChange={handleChange}
+                                    />
+                                </div>
+
+                                <div className="col-md-3">
+                                    <label className="form-label fw-semibold">
+                                        Opening Rate
+                                    </label>
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        name="o_rate"
+                                        placeholder="Enter opening rate"
+                                        value={formData.o_rate}
+                                        onChange={handleChange}
+                                    />
+                                </div>
+
+                                <div className="col-md-3">
+                                    <label className="form-label fw-semibold">
+                                        GST %
+                                    </label>
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        name="gst"
+                                        placeholder="Enter GST"
+                                        value={formData.gst}
+                                        onChange={handleChange}
+                                    />
+                                </div>
+
+                                <div className="col-md-3">
+                                    <label className="form-label fw-semibold">
+                                        GST Code
+                                    </label>
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        name="gst_code"
+                                        placeholder="Enter GST code"
+                                        value={formData.gst_code}
+                                        onChange={handleChange}
+                                    />
+                                </div>
+
+                                <div className="col-12">
                                     <button
                                         type="submit"
                                         className="btn btn-success me-2"
@@ -414,11 +546,29 @@ const StockItem = () => {
                             <h5 className="mb-0">Stock Item List</h5>
                         </div>
 
-                        <div className="col-md-6 mt-3 mt-md-0">
+                        <div className="col-md-3 mt-3 mt-md-0">
+                            <select
+                                className="form-select"
+                                value={categoryFilter}
+                                onChange={(e) => {
+                                    setCategoryFilter(e.target.value);
+                                    setPage(1);
+                                }}
+                            >
+                               
+                                {categories.map((category) => (
+                                    <option key={category.id} value={category.id}>
+                                        {category.name} 
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="col-md-3 mt-3 mt-md-0">
                             <input
                                 type="text"
                                 className="form-control"
-                                placeholder="Search by name or in ltr..."
+                                placeholder="Search stock item..."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                             />
@@ -438,9 +588,13 @@ const StockItem = () => {
                         rowsPerPageOptions={[5, 10, 20, 50]}
                         onPage={handlePageChange}
                         responsiveLayout="scroll"
-                        tableStyle={{ minWidth: "48rem" }}
+                        tableStyle={{ minWidth: "72rem" }}
                         emptyMessage={
-                            debouncedSearch
+                            categoryFilter && debouncedSearch
+                                ? "No stock items found for this category and search"
+                                : categoryFilter
+                                    ? "No stock items found for this category"
+                                    : debouncedSearch
                                 ? "No stock items found for this search"
                                 : "No stock items found"
                         }
@@ -464,6 +618,13 @@ const StockItem = () => {
                         />
                         <Column field="name" header="Name" />
                         <Column field="inLtr" header="In Ltr" />
+                        <Column field="product_category_name" header="Category" />
+                        <Column field="product_category_unit" header="Category Unit" />
+                        <Column field="measure_unit" header="Measure Unit" />
+                        <Column field="o_quantity" header="Opening Qty" />
+                        <Column field="o_rate" header="Opening Rate" />
+                        <Column field="gst" header="GST" />
+                        <Column field="gst_code" header="GST Code" />
                         <Column
                             field="created_at"
                             header="Created At"

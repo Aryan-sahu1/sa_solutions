@@ -30,7 +30,18 @@ router.get("/:id", customerController.findById);
 
 
 // Update customer
+router.put(
+    "/update-password",
+    customerAuthMiddleware,
+    customerController.changePassword
+);
+
+
+// Update customer
 router.put("/:id", customerController.update);
+
+
+
 
 
 // Delete customer

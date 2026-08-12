@@ -1,5 +1,5 @@
 const staffMemberRepository = require("../repository/staffMember.repository");
-const productRepository = require("../repository/product.repository");
+const staffCategoryRepository = require("../repository/staff.repository");
 
 const createError = (message, statusCode = 400) => {
     const error = new Error(message);
@@ -21,21 +21,30 @@ const validateStaffMember = (body) => {
     }
 
     if (Number.isNaN(Number(body.pid))) {
-        throw createError("pid must be a valid product id");
+        throw createError("pid must be a valid staff category id");
     }
 };
 
-const validateProduct = async (pid) => {
-    const product = await productRepository.findById(pid);
+const validateStaffCategory = async (pid, customer) => {
+    const staffCategory = await staffCategoryRepository.findById(pid);
 
-    if (!product) {
-        throw createError("Selected product does not exist", 404);
+    if (!staffCategory) {
+        throw createError("Selected staff category does not exist", 404);
     }
+
+    if (Number(staffCategory.product_id) !== Number(customer?.product_id)) {
+        throw createError(
+            "Selected staff category is not available for this customer product",
+            400
+        );
+    }
+
+    return staffCategory;
 };
 
-const create = async (body, userId) => {
+const create = async (body, userId, customer) => {
     validateStaffMember(body);
-    await validateProduct(body.pid);
+    await validateStaffCategory(body.pid, customer);
 
     return await staffMemberRepository.create(body, userId);
 };
@@ -65,7 +74,7 @@ const findById = async (id, userId) => {
     return data;
 };
 
-const update = async (id, body, userId) => {
+const update = async (id, body, userId, customer) => {
     validateStaffMember(body);
 
     const existingData = await staffMemberRepository.findById(id, userId);
@@ -74,7 +83,7 @@ const update = async (id, body, userId) => {
         throw createError("Staff member not found", 404);
     }
 
-    await validateProduct(body.pid);
+    await validateStaffCategory(body.pid, customer);
     await staffMemberRepository.update(id, body, userId);
 
     return await staffMemberRepository.findById(id, userId);

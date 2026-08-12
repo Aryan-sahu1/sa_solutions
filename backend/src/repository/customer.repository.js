@@ -221,6 +221,7 @@ const update = async (id, body) => {
             product_price = ?,
             amc_price = ?,
             username = ?,
+            password = COALESCE(?, password),
             company_code = ?,
             remarks = ?
         WHERE id = ?
@@ -240,6 +241,7 @@ const update = async (id, body) => {
         body.product_price,
         body.amc_price,
         body.username,
+        body.password || null,
         body.company_code,
         body.remarks,
         id
@@ -264,12 +266,37 @@ const remove = async (id) => {
 
 const findByUsername = async (username) => {
     const [rows] = await db.query(
-        "SELECT id, name, username, password FROM customers WHERE username = ?",
+        `SELECT id, name, username, password
+         FROM customers
+         WHERE username = ?
+         AND deleted_at IS NULL`,
         [username]
     );
     return rows[0] || null;
 };
 
+const findByIdWithPassword = async (id) => {
+    const [rows] = await db.query(
+        `SELECT id, name, username, password
+         FROM customers
+         WHERE id = ?
+         AND deleted_at IS NULL`,
+        [id]
+    );
+
+    return rows[0] || null;
+};
+
+const updatePassword = async (id, password) => {
+    const sql = `
+        UPDATE customers
+        SET password = ?
+        WHERE id = ?
+        AND deleted_at IS NULL
+    `;
+    const [result] = await db.query(sql, [password, id]);
+    return result;
+}
 
 module.exports = {
     create,
@@ -277,5 +304,7 @@ module.exports = {
     findById,
     update,
     remove,
-    findByUsername
+    findByUsername,
+    findByIdWithPassword,
+    updatePassword
 };
