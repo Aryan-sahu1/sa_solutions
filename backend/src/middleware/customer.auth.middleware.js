@@ -31,6 +31,7 @@ const authenticateCustomerToken = async (req, res, next) => {
 
         req.user = decoded;
         req.customer = customer;
+        req.authType = decoded.user_type || "customer";
 
         next();
     } catch (error) {

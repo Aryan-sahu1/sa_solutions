@@ -265,13 +265,42 @@ const remove = async (id) => {
 };
 
 const findByUsername = async (username) => {
-    const [rows] = await db.query(
-        `SELECT id, name, username, password
+    let rows;
+
+    // First check customer
+    [rows] = await db.query(
+        `SELECT 
+            id,
+            name,
+            username,
+            password,
+            'customer' AS user_type
          FROM customers
          WHERE username = ?
          AND deleted_at IS NULL`,
         [username]
     );
+
+    // If customer not found, check staff
+    if (rows.length === 0) {
+        [rows] = await db.query(
+            `SELECT 
+                cid AS id,
+                id AS staff_id,
+                cid AS customer_id,
+                name,
+                name AS username,
+                password,
+                'staff' AS user_type
+             FROM staff
+             WHERE name = ?
+             AND deleted_at IS NULL`,
+            [username]
+        );
+    }
+
+    console.log("Login user:", rows[0] || null);
+
     return rows[0] || null;
 };
 

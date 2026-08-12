@@ -1,6 +1,6 @@
 const staffMemberRepository = require("../repository/staffMember.repository");
 const staffCategoryRepository = require("../repository/staff.repository");
-
+const bcrypt = require("bcrypt");
 const createError = (message, statusCode = 400) => {
     const error = new Error(message);
     error.statusCode = statusCode;
@@ -45,8 +45,15 @@ const validateStaffCategory = async (pid, customer) => {
 const create = async (body, userId, customer) => {
     validateStaffMember(body);
     await validateStaffCategory(body.pid, customer);
-
-    return await staffMemberRepository.create(body, userId);
+    const staffExist= await staffMemberRepository.findByName(body.name)
+    console.log(staffExist,"staffExiststaffExist")
+    if (staffExist) {
+        throw createError("Staff already exist , Create With different mobile number");
+    }
+ const hashedPassword = await bcrypt.hash(body.password, 10);
+    
+    return await staffMemberRepository.create({ ...body,
+        password: hashedPassword}, userId);
 };
 
 const findAll = async (options = {}) => {
@@ -84,7 +91,15 @@ const update = async (id, body, userId, customer) => {
     }
 
     await validateStaffCategory(body.pid, customer);
-    await staffMemberRepository.update(id, body, userId);
+    const hashedPassword = await bcrypt.hash(body.password, 10);
+    await staffMemberRepository.update(
+        id,
+        {
+            ...body,
+            password: hashedPassword
+        },
+        userId
+    );
 
     return await staffMemberRepository.findById(id, userId);
 };

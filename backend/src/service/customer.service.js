@@ -111,6 +111,7 @@ const loginUser = async (username, password) => {
     // Find user
     const user =
         await customerRepository.findByUsername(username);
+
     if (!user) {
         throw createError("Invalid username or password", 401);
     }
@@ -130,6 +131,8 @@ const loginUser = async (username, password) => {
     const token = generateToken({
         id: user.id,
         username: user.username,
+        user_type: user.user_type,
+        staff_id: user.staff_id
     });
 
     return {
@@ -137,6 +140,8 @@ const loginUser = async (username, password) => {
         user: {
             id: user.id,
             username: user.username,
+            user_type: user.user_type,
+            staff_id: user.staff_id || null,
         },
     };
 };

@@ -6,7 +6,9 @@ const generateToken = (user) => {
     return jwt.sign(
         {
             id: user.id,
-            username: user.username
+            username: user.username,
+            user_type: user.user_type,
+            staff_id: user.staff_id || null
         },
         JWT_SECRET,
         {

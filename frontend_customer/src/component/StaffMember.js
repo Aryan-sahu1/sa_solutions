@@ -396,13 +396,13 @@ const StaffMember = () => {
                             <div className="row align-items-end">
                                 <div className="col-md-4">
                                     <label className="form-label fw-semibold">
-                                        Name
+                                        Mobile No.
                                     </label>
                                     <input
-                                        type="text"
+                                        type="number"
                                         className="form-control"
                                         name="name"
-                                        placeholder="Enter staff name"
+                                        placeholder="Enter Mobile no."
                                         value={formData.name}
                                         onChange={handleChange}
                                     />
@@ -523,7 +523,7 @@ const StaffMember = () => {
                             body={serialNumberTemplate}
                             style={{ width: "80px" }}
                         />
-                        <Column field="name" header="Name" />
+                        <Column field="name" header="Mobile No." />
                         <Column header="Staff Category" body={productBodyTemplate} />
                         <Column
                             field="created_at"

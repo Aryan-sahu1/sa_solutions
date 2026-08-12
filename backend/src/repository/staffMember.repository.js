@@ -151,10 +151,18 @@ const remove = async (id, userId) => {
     return result;
 };
 
+const findByName=async(name)=>{
+const sql = `SELECT id, name,password FROM staff WHERE name=? AND deleted_at IS NULL`
+const [rows]= await db.query(sql,name)
+console.log(rows,"kkkkkkkkk")
+return rows;
+}
+
+
 module.exports = {
     create,
     findAll,
     findById,
     update,
-    remove
+    remove,findByName
 };
