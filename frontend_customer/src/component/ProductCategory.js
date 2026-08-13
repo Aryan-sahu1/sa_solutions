@@ -264,20 +264,6 @@ const ProductCategory = () => {
         return (page - 1) * limit + options.rowIndex + 1;
     };
 
-    const dateBodyTemplate = (row) => {
-        if (!row.created_at) {
-            return "-";
-        }
-
-        const date = new Date(row.created_at);
-
-        if (Number.isNaN(date.getTime())) {
-            return "-";
-        }
-
-        return date.toLocaleString();
-    };
-
     const actionBodyTemplate = (row) => {
         return (
             <div>
@@ -460,11 +446,6 @@ const ProductCategory = () => {
                         />
                         <Column field="name" header="Name" />
                         <Column field="unit" header="Unit" />
-                        <Column
-                            field="created_at"
-                            header="Created At"
-                            body={dateBodyTemplate}
-                        />
                         <Column
                             header="Action"
                             body={actionBodyTemplate}

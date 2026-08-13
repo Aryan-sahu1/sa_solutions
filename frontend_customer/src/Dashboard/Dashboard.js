@@ -59,7 +59,7 @@ const Dashboard = () => {
         const diff = endDate.setHours(0, 0, 0, 0) - today.setHours(0, 0, 0, 0);
         const daysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24));
 
-        if (daysLeft < 0) {
+        if (daysLeft <= 0) {
             return {
                 label: "Expired",
                 className: "text-bg-danger",
@@ -81,6 +81,8 @@ const Dashboard = () => {
             daysLeft,
         };
     }, [customer?.end_date]);
+
+    const isPlanExpired = subscription.daysLeft !== null && subscription.daysLeft <= 0;
 
     const customerCards = [
         {
@@ -125,6 +127,12 @@ const Dashboard = () => {
 
     return (
         <div className="customer-dashboard container-fluid p-4">
+            {isPlanExpired && (
+                <marquee className="plan-expired-marquee mb-3">
+                   Your plan has expired. Please renew your plan to continue using the service.
+                </marquee>
+            )}
+
             <section className="dashboard-hero mb-4">
                 <div>
                     <span className="badge rounded-pill text-bg-light mb-3">
@@ -262,6 +270,17 @@ const Dashboard = () => {
                     background: linear-gradient(135deg, #0d6efd, #20c997);
                     border-radius: 8px;
                     box-shadow: 0 14px 34px rgba(13, 110, 253, 0.18);
+                }
+
+                .plan-expired-marquee {
+                    display: block;
+                    padding: 11px 16px;
+                    color: #ffffff;
+                    background: #dc3545;
+                    border-radius: 8px;
+                    font-size: 16px;
+                    font-weight: 700;
+                    box-shadow: 0 8px 20px rgba(220, 53, 69, 0.2);
                 }
 
                 .dashboard-hero .badge {

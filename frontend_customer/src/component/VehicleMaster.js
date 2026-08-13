@@ -122,7 +122,11 @@ const VehicleMaster = () => {
             );
 
             if (response.data.status) {
-                setParties(response.data.data || []);
+                const nextParties = response.data.data || [];
+                setParties(nextParties);
+                setSelectedPartyId((current) =>
+                    current || toInputValue(nextParties[0]?.id)
+                );
             }
         } catch (err) {
             console.error("Party option error:", err);
@@ -328,22 +332,6 @@ const VehicleMaster = () => {
     const serialNumberTemplate = (row, options) => {
         return (page - 1) * limit + options.rowIndex + 1;
     };
-
-    const dateBodyTemplate = (row) => {
-        if (!row.created_at) {
-            return "-";
-        }
-
-        const date = new Date(row.created_at);
-
-        if (Number.isNaN(date.getTime())) {
-            return "-";
-        }
-
-        return date.toLocaleString();
-    };
-
-   
 
     const actionBodyTemplate = (row) => {
         return (

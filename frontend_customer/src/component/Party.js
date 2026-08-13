@@ -43,6 +43,12 @@ const Party = () => {
     const [limit, setLimit] = useState(5);
     const [totalRecords, setTotalRecords] = useState(0);
 
+    const getDefaultFormData = useCallback(() => ({
+        ...initialFormData,
+        sid: toInputValue(headMasters[0]?.id),
+        sid1: toInputValue(tHeadMasters[0]?.id),
+    }), [headMasters, tHeadMasters]);
+
     useEffect(() => {
         const timer = setTimeout(() => {
             setDebouncedSearch(search.trim());
@@ -128,14 +134,15 @@ const Party = () => {
                 }),
             ]);
 
+            let nextHeadMasters = [];
+            let nextTHeadMasters = [];
+
             if (
                 headResult.status === "fulfilled" &&
                 headResult.value.data.status
             ) {
                 const headResponse = headResult.value;
-                setHeadMasters(headResponse.data.data || []);
-            } else {
-                setHeadMasters([]);
+                nextHeadMasters = headResponse.data.data || [];
             }
 
             if (
@@ -143,10 +150,16 @@ const Party = () => {
                 tHeadResult.value.data.status
             ) {
                 const tHeadResponse = tHeadResult.value;
-                setTHeadMasters(tHeadResponse.data.data || []);
-            } else {
-                setTHeadMasters([]);
+                nextTHeadMasters = tHeadResponse.data.data || [];
             }
+
+            setHeadMasters(nextHeadMasters);
+            setTHeadMasters(nextTHeadMasters);
+            setFormData((current) => ({
+                ...current,
+                sid: current.sid || toInputValue(nextHeadMasters[0]?.id),
+                sid1: current.sid1 || toInputValue(nextTHeadMasters[0]?.id),
+            }));
         } catch (err) {
             console.error("Party head option error:", err);
             setError(
@@ -165,7 +178,7 @@ const Party = () => {
     }, [page, limit, debouncedSearch, getParties]);
 
     const resetForm = () => {
-        setFormData(initialFormData);
+        setFormData(getDefaultFormData());
         setEditId(null);
     };
 
@@ -338,20 +351,6 @@ const Party = () => {
 
     const serialNumberTemplate = (row, options) => {
         return (page - 1) * limit + options.rowIndex + 1;
-    };
-
-    const dateBodyTemplate = (row) => {
-        if (!row.created_at) {
-            return "-";
-        }
-
-        const date = new Date(row.created_at);
-
-        if (Number.isNaN(date.getTime())) {
-            return "-";
-        }
-
-        return date.toLocaleString();
     };
 
     const headBodyTemplate = (row) => {
@@ -635,11 +634,6 @@ const Party = () => {
                             body={tHeadBodyTemplate}
                         />
                         <Column field="salary" header="Salary" />
-                        <Column
-                            field="created_at"
-                            header="Created At"
-                            body={dateBodyTemplate}
-                        />
                         <Column
                             header="Action"
                             body={actionBodyTemplate}

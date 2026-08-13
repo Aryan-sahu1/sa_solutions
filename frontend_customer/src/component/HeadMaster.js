@@ -4,12 +4,12 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { useAuth } from "../context/AuthContext";
 
+const headTypeOptions = ["Trading", "Profit/Loss", "Balance Sheet"];
+
 const initialFormData = {
     name: "",
-    head_type: "",
+    head_type: headTypeOptions[0],
 };
-
-const headTypeOptions = ["Trading", "Profit/Loss", "Balance Sheet"];
 
 const HeadMaster = () => {
     const { authHeaders } = useAuth();
@@ -265,20 +265,6 @@ const HeadMaster = () => {
         return (page - 1) * limit + options.rowIndex + 1;
     };
 
-    const dateBodyTemplate = (row) => {
-        if (!row.created_at) {
-            return "-";
-        }
-
-        const date = new Date(row.created_at);
-
-        if (Number.isNaN(date.getTime())) {
-            return "-";
-        }
-
-        return date.toLocaleString();
-    };
-
     const actionBodyTemplate = (row) => {
         return (
             <div>
@@ -466,11 +452,6 @@ const HeadMaster = () => {
                         />
                         <Column field="name" header="Name" />
                         <Column field="head_type" header="Head Type" />
-                        <Column
-                            field="created_at"
-                            header="Created At"
-                            body={dateBodyTemplate}
-                        />
                         <Column
                             header="Action"
                             body={actionBodyTemplate}

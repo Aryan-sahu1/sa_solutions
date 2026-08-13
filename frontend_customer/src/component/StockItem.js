@@ -32,7 +32,6 @@ const StockItem = () => {
 
     const [search, setSearch] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
-    debugger
     const [categoryFilter, setCategoryFilter] = useState("");
 
     const [loading, setLoading] = useState(false);
@@ -116,7 +115,6 @@ const StockItem = () => {
     );
 
     const getCategories = useCallback(async () => {
-debugger
         try {
             const response = await axios.get(
                 "http://localhost:4000/api/product-category",
@@ -130,7 +128,11 @@ debugger
             );
 
             if (response.data.status) {
-                setCategories(response.data.data || []);
+                const nextCategories = response.data.data || [];
+                setCategories(nextCategories);
+                setCategoryFilter((current) =>
+                    current || toInputValue(nextCategories[0]?.id)
+                );
             }
         } catch (err) {
             console.error("Product category option error:", err);
@@ -326,20 +328,6 @@ debugger
 
     const serialNumberTemplate = (row, options) => {
         return (page - 1) * limit + options.rowIndex + 1;
-    };
-
-    const dateBodyTemplate = (row) => {
-        if (!row.created_at) {
-            return "-";
-        }
-
-        const date = new Date(row.created_at);
-
-        if (Number.isNaN(date.getTime())) {
-            return "-";
-        }
-
-        return date.toLocaleString();
     };
 
     const actionBodyTemplate = (row) => {
@@ -625,11 +613,6 @@ debugger
                         <Column field="o_rate" header="Opening Rate" />
                         <Column field="gst" header="GST" />
                         <Column field="gst_code" header="GST Code" />
-                        <Column
-                            field="created_at"
-                            header="Created At"
-                            body={dateBodyTemplate}
-                        />
                         <Column
                             header="Action"
                             body={actionBodyTemplate}

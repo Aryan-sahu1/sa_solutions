@@ -38,6 +38,11 @@ const StaffMember = () => {
     const [limit, setLimit] = useState(5);
     const [totalRecords, setTotalRecords] = useState(0);
 
+    const getDefaultFormData = useCallback(() => ({
+        ...initialFormData,
+        pid: toInputValue(staffCategories[0]?.id),
+    }), [staffCategories]);
+
     useEffect(() => {
         const timer = setTimeout(() => {
             setDebouncedSearch(search.trim());
@@ -114,7 +119,12 @@ const StaffMember = () => {
             );
 
             if (response.data.status) {
-                setStaffCategories(response.data.data || []);
+                const nextCategories = response.data.data || [];
+                setStaffCategories(nextCategories);
+                setFormData((current) => ({
+                    ...current,
+                    pid: current.pid || toInputValue(nextCategories[0]?.id),
+                }));
             }
         } catch (err) {
             console.error("Staff category option error:", err);
@@ -134,7 +144,7 @@ const StaffMember = () => {
     }, [page, limit, debouncedSearch, getStaffMembers]);
 
     const resetForm = () => {
-        setFormData(initialFormData);
+        setFormData(getDefaultFormData());
         setEditId(null);
     };
 
@@ -306,20 +316,6 @@ const StaffMember = () => {
         return (page - 1) * limit + options.rowIndex + 1;
     };
 
-    const dateBodyTemplate = (row) => {
-        if (!row.created_at) {
-            return "-";
-        }
-
-        const date = new Date(row.created_at);
-
-        if (Number.isNaN(date.getTime())) {
-            return "-";
-        }
-
-        return date.toLocaleString();
-    };
-
     const productBodyTemplate = (row) => {
         return row.staff_category_name || row.product_name || "-";
     };
@@ -418,7 +414,6 @@ const StaffMember = () => {
                                         value={formData.pid}
                                         onChange={handleChange}
                                     >
-                                        <option value="">Select staff category</option>
                                         {staffCategories.map((category) => (
                                             <option key={category.id} value={category.id}>
                                                 {category.name}
@@ -525,11 +520,6 @@ const StaffMember = () => {
                         />
                         <Column field="name" header="Mobile No." />
                         <Column header="Staff Category" body={productBodyTemplate} />
-                        <Column
-                            field="created_at"
-                            header="Created At"
-                            body={dateBodyTemplate}
-                        />
                         <Column
                             header="Action"
                             body={actionBodyTemplate}
