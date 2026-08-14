@@ -37,7 +37,7 @@ const CompanyLogin = () => {
             });
 
             setMessage("Login Successfully")
-            navigate("/dashboard");
+            navigate("/dashboard", { state: { showWelcome: true } });
 
         } catch (error) {
             logout();

@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
     FaBoxOpen,
     FaCalendarAlt,
@@ -36,8 +37,11 @@ const formatAmount = (value) => {
 
 const Dashboard = () => {
     const { customer, verifyCustomer } = useAuth();
+    const location = useLocation();
+    const navigate = useNavigate();
     const [refreshing, setRefreshing] = useState(false);
     const [message, setMessage] = useState("");
+    const [showWelcome, setShowWelcome] = useState(Boolean(location.state?.showWelcome));
 
     const productName =
         customer?.product?.name ||
@@ -84,6 +88,20 @@ const Dashboard = () => {
 
     const isPlanExpired = subscription.daysLeft !== null && subscription.daysLeft <= 0;
 
+    useEffect(() => {
+        if (!showWelcome) {
+            return undefined;
+        }
+
+        navigate(location.pathname, { replace: true, state: {} });
+
+        const timer = setTimeout(() => {
+            setShowWelcome(false);
+        }, 3500);
+
+        return () => clearTimeout(timer);
+    }, [location.pathname, navigate, showWelcome]);
+
     const customerCards = [
         {
             title: "Assigned Product",
@@ -127,6 +145,12 @@ const Dashboard = () => {
 
     return (
         <div className="customer-dashboard container-fluid p-4">
+            {showWelcome && (
+                <div className="alert alert-success py-2 mb-3">
+                    Welcome, {customer?.name || customer?.username || "Customer"}!
+                </div>
+            )}
+
             {isPlanExpired && (
                 <marquee className="plan-expired-marquee mb-3">
                    Your plan has expired. Please renew your plan to continue using the service.
