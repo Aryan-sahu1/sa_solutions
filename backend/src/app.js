@@ -13,6 +13,7 @@ const productCategoryRoutes = require("./routes/productCategory.routes");
 const stockItemRoutes = require("./routes/stockItem.routes");
 const staffMemberRoutes = require("./routes/staffMember.routes");
 const vehicleMasterRoutes = require("./routes/vehicleMaster.routes");
+const customerPetrolRoutes = require("./routes/customerPetrol.routes");
 const customerRoutes =
     require("./routes/customer.routes");
 const errorHandler = require("./middleware/errorHandler");
@@ -32,6 +33,7 @@ app.use("/api/product-category", productCategoryRoutes);
 app.use("/api/stock-item", stockItemRoutes);
 app.use("/api/staff-member", staffMemberRoutes);
 app.use("/api/vehicle-master", vehicleMasterRoutes);
+app.use("/api/customer-petrol", customerPetrolRoutes);
 app.use("/api/customers", customerRoutes);
 
 

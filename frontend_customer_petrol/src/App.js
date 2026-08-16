@@ -21,6 +21,7 @@ import StockItem from "./component/StockItem";
 import StaffMember from "./component/StaffMember";
 import VehicleMaster from "./component/VehicleMaster";
 import { AuthProvider } from "./context/AuthContext";
+import AddItem from "./component/AddItem";
 
  
 
@@ -97,6 +98,10 @@ const App = () => {
                         <Route
                             path="/vehicle-master"
                             element={<VehicleMaster />}
+                        />
+                         <Route
+                            path="/add-data"
+                            element={<AddItem />}
                         />
                     </Route>
 

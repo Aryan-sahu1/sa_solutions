@@ -17,6 +17,14 @@ import { useAuth } from "../context/AuthContext";
 
 const menuItems = [
     { to: "/dashboard", label: "Dashboard", icon: <FaTachometerAlt /> },
+     {
+        label: "Entry",
+        icon: <FaLayerGroup />,
+        children: [
+            // { to: "/product", label: "Accounts", icon: <FaBoxOpen /> },
+            { to: "/add-data", label: "Add Item", icon: <FaBoxOpen /> },
+        ],
+    },
     {
         label: "Master",
         icon: <FaLayerGroup />,
