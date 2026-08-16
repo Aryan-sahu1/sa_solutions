@@ -1,5 +1,5 @@
 const staffMemberRepository = require("../repository/staffMember.repository");
-const staffCategoryRepository = require("../repository/staff.repository");
+const masterRepository = require("../repository/master.repository");
 const bcrypt = require("bcrypt");
 const createError = (message, statusCode = 400) => {
     const error = new Error(message);
@@ -26,13 +26,13 @@ const validateStaffMember = (body) => {
 };
 
 const validateStaffCategory = async (pid, customer) => {
-    const staffCategory = await staffCategoryRepository.findById(pid);
+    const staffCategory = await masterRepository.findById(pid);
 
     if (!staffCategory) {
         throw createError("Selected staff category does not exist", 404);
     }
 
-    if (Number(staffCategory.product_id) !== Number(customer?.product_id)) {
+    if (Number(staffCategory.sid) !== Number(customer?.product_id)) {
         throw createError(
             "Selected staff category is not available for this customer product",
             400
@@ -47,7 +47,7 @@ const create = async (body, userId, customer) => {
     await validateStaffCategory(body.pid, customer);
     const staffExist= await staffMemberRepository.findByName(body.name)
     console.log(staffExist,"staffExiststaffExist")
-    if (staffExist) {
+    if (staffExist.length>0) {
         throw createError("Staff already exist , Create With different mobile number");
     }
  const hashedPassword = await bcrypt.hash(body.password, 10);

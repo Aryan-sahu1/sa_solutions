@@ -40,11 +40,11 @@ const findAll = async ({ userId, page = 1, limit = 10, search = "" } = {}) => {
             sc.name AS staff_category_name,
             p.name AS product_name
         FROM staff s
-        LEFT JOIN staff_categories sc
+        LEFT JOIN master sc
             ON sc.id = s.pid
             AND sc.deleted_at IS NULL
         LEFT JOIN products p
-            ON p.id = sc.product_id
+            ON p.id = sc.sid
             AND p.deleted_at IS NULL
         ${where}
         ORDER BY s.id DESC
@@ -54,11 +54,11 @@ const findAll = async ({ userId, page = 1, limit = 10, search = "" } = {}) => {
     const countSql = `
         SELECT COUNT(*) AS total
         FROM staff s
-        LEFT JOIN staff_categories sc
+        LEFT JOIN master sc
             ON sc.id = s.pid
             AND sc.deleted_at IS NULL
         LEFT JOIN products p
-            ON p.id = sc.product_id
+            ON p.id = sc.sid
             AND p.deleted_at IS NULL
         ${where}
     `;
@@ -99,11 +99,11 @@ const findById = async (id, userId) => {
             sc.name AS staff_category_name,
             p.name AS product_name
         FROM staff s
-        LEFT JOIN staff_categories sc
+        LEFT JOIN master sc
             ON sc.id = s.pid
             AND sc.deleted_at IS NULL
         LEFT JOIN products p
-            ON p.id = sc.product_id
+            ON p.id = sc.sid
             AND p.deleted_at IS NULL
         WHERE s.id = ?
         AND s.cid = ?
@@ -152,8 +152,9 @@ const remove = async (id, userId) => {
 };
 
 const findByName=async(name)=>{
+    console.log(name,"namenamename")
 const sql = `SELECT id, name,password FROM staff WHERE name=? AND deleted_at IS NULL`
-const [rows]= await db.query(sql,name)
+const [rows]= await db.query(sql,[name])
 console.log(rows,"kkkkkkkkk")
 return rows;
 }

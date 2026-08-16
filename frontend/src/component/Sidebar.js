@@ -16,8 +16,9 @@ const menuItems = [
     { to: "/dashboard", label: "Dashboard", icon: <FaTachometerAlt /> },
     { to: "/product", label: "Create Product", icon: <FaBoxOpen /> },
     { to: "/t-head-master", label: "T Head Master", icon: <FaLayerGroup /> },
-    { to: "/staff", label: "Staff Category", icon: <FaUserTie /> },
+    { to: "/masters", label: "Master", icon: <FaUserTie /> },
     { to: "/customers", label: "Create Customer", icon: <FaUsers /> },
+    { to: "/master-list", label: "Master List", icon: <FaUsers /> },
     { to: "/change-password", label: "Change Password", icon: <FaKey /> },
 ];
 

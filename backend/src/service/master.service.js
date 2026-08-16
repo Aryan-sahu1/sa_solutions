@@ -1,17 +1,33 @@
-const staffCategoryRepository = require("../repository/staff.repository");
+const masterRepository = require("../repository/master.repository");
+
+const validateMasterList = async (id) => {
+    if (Number.isNaN(Number(id))) {
+        throw new Error("product_id must be a valid master list id");
+    }
+
+    const masterList = await masterRepository.findMasterListById(id);
+
+    if (!masterList) {
+        throw new Error("Selected master list not found");
+    }
+
+    return masterList;
+};
 
 const create = async (body) => {
     if (!body.product_id || !body.name) {
         throw new Error("product_id and name are required");
     }
 
-    const result = await staffCategoryRepository.create(body);
+    await validateMasterList(body.product_id);
+
+    const result = await masterRepository.create(body);
 
     return result;
 };
 
 const findAll = async (options = {}) => {
-    const result = await staffCategoryRepository.findAll(options);
+    const result = await masterRepository.findAll(options);
 
     let rows = [];
     let total = 0;
@@ -27,7 +43,7 @@ const findAll = async (options = {}) => {
     const mapped = rows.map((item) => ({
         id: item.id,
         product: {
-            id: item.product_id,
+            id: item.sid,
             name: item.product_name
         },
         name: item.name,
@@ -44,7 +60,7 @@ const findAll = async (options = {}) => {
 };
 
 const findById = async (id) => {
-    const data = await staffCategoryRepository.findById(id);
+    const data = await masterRepository.findById(id);
 
     if (!data) {
         throw new Error("Staff category not found");
@@ -58,25 +74,27 @@ const update = async (id, body) => {
         throw new Error("product_id and name are required");
     }
 
-    const existingData = await staffCategoryRepository.findById(id);
+    await validateMasterList(body.product_id);
+
+    const existingData = await masterRepository.findById(id);
 
     if (!existingData) {
         throw new Error("Staff category not found");
     }
 
-    const result = await staffCategoryRepository.update(id, body);
+    const result = await masterRepository.update(id, body);
 
     return result;
 };
 
 const remove = async (id) => {
-    const existingData = await staffCategoryRepository.findById(id);
+    const existingData = await masterRepository.findById(id);
 
     if (!existingData) {
         throw new Error("Staff category not found");
     }
 
-    const result = await staffCategoryRepository.remove(id);
+    const result = await masterRepository.remove(id);
 
     return result;
 };

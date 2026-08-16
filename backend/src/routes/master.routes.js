@@ -2,30 +2,30 @@ const express = require("express");
 
 const router = express.Router();
 
-const staffCategoryController = require("../controller/staff.controller");
+const masterController = require("../controller/master.controller");
 const customerAuthMiddleware =
     require("../middleware/customer.auth.middleware");
 
 // Create staff category
-router.post("/", staffCategoryController.create);
+router.post("/", masterController.create);
 
 // Get all staff categories
-router.get("/", staffCategoryController.findAll);
+router.get("/", masterController.findAll);
 
 // Get staff categories for logged-in customer's selected product
 router.get(
     "/customer-options",
     customerAuthMiddleware,
-    staffCategoryController.findByCustomerProduct
+    masterController.findByCustomerProduct
 );
 
 // Get staff category by ID
-router.get("/:id", staffCategoryController.findById);
+router.get("/:id", masterController.findById);
 
 // Update staff category
-router.put("/:id", staffCategoryController.update);
+router.put("/:id", masterController.update);
 
 // Delete staff category
-router.delete("/:id", staffCategoryController.remove);
+router.delete("/:id", masterController.remove);
 
 module.exports = router;

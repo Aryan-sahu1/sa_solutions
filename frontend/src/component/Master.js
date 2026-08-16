@@ -3,16 +3,18 @@ import axios from "axios";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 
-const Staff = () => {
+const Master = () => {
     const [staffList, setStaffList] = useState([]);
     const [products, setProducts] = useState([]);
+    const [masterListOptions, setMasterListOptions] = useState([]);
 
     const [search, setSearch] = useState("");
+    const [productFilter, setProductFilter] = useState("");
+    const [masterListFilter, setMasterListFilter] = useState("");
     const [showForm, setShowForm] = useState(false);
 
     const [formData, setFormData] = useState({
         name: "",
-        product_id: "",
     });
 
     const [editId, setEditId] = useState(null);
@@ -31,19 +33,38 @@ const Staff = () => {
     // ==========================================
     // GET STAFF LIST
     // ==========================================
-    const getStaffList = useCallback(async ({ p = 1, l = 10, s = "" } = {}) => {
+    const getStaffList = useCallback(async ({
+        p = 1,
+        l = 10,
+        s = "",
+        productId = "",
+        masterListName = "",
+    } = {}) => {
         try {
             setListLoading(true);
             setError("");
 
+            const params = {
+                limit: l,
+                page: p,
+            };
+
+            if (s) {
+                params.search = s;
+            }
+
+            if (productId) {
+                params.product_id = productId;
+            }
+
+            if (masterListName) {
+                params.master_list_name = masterListName;
+            }
+
             const response = await axios.get(
                 "http://localhost:4000/api/staff/",
                 {
-                    params: {
-                        limit: l,
-                        page: p,
-                        search: s
-                    }
+                    params
                 }
             );
 
@@ -58,7 +79,7 @@ const Staff = () => {
             }
 
         } catch (error) {
-            console.error("Staff List Error:", error);
+            console.error("Master List Error:", error);
 
             setError(
                 error.response?.data?.message ||
@@ -79,7 +100,11 @@ const Staff = () => {
             );
 
             if (response.data.status) {
-                setProducts(response.data.data || []);
+                const nextProducts = response.data.data || [];
+                setProducts(nextProducts);
+                setProductFilter((current) =>
+                    current || String(nextProducts[0]?.id || "")
+                );
             }
 
         } catch (error) {
@@ -88,12 +113,57 @@ const Staff = () => {
     }, []);
 
     // ==========================================
+    // GET MASTER LIST OPTIONS
+    // ==========================================
+    const getMasterListOptions = useCallback(async (productId = "") => {
+        try {
+            const params = {
+                page: 1,
+                limit: 1000,
+            };
+
+            if (productId) {
+                params.product_id = productId;
+            }
+
+            const response = await axios.get(
+                "http://localhost:4000/api/master-list/",
+                {
+                    params
+                }
+            );
+
+            if (response.data.status) {
+                const nextOptions = response.data.data || [];
+                setMasterListOptions(nextOptions);
+                setMasterListFilter((current) => {
+                    const hasCurrent = nextOptions.some(
+                        (item) => String(item.id) === String(current)
+                    );
+
+                    return hasCurrent ? current : String(nextOptions[0]?.id || "");
+                });
+            } else {
+                setMasterListOptions([]);
+                setMasterListFilter("");
+            }
+        } catch (error) {
+            console.error("Master List Option Error:", error);
+            setMasterListOptions([]);
+            setMasterListFilter("");
+        }
+    }, []);
+
+    // ==========================================
     // PAGE LOAD
     // ==========================================
     useEffect(() => {
-        getStaffList({ p: 1, l: 10, s: "" });
         getProducts();
-    }, [getProducts, getStaffList]);
+    }, [getProducts]);
+
+    useEffect(() => {
+        getMasterListOptions(productFilter);
+    }, [getMasterListOptions, productFilter]);
 
     // ==========================================
     // INPUT CHANGE
@@ -117,12 +187,12 @@ const Staff = () => {
         setError("");
 
         if (!formData.name.trim()) {
-            setError("Staff name is required");
+            setError("Master name is required");
             return;
         }
 
-        if (!formData.product_id) {
-            setError("Please select product");
+        if (!masterListFilter) {
+            setError("Please select master list from second dropdown");
             return;
         }
 
@@ -140,7 +210,7 @@ const Staff = () => {
                     `http://localhost:4000/api/staff/${editId}`,
                     {
                         name: formData.name.trim(),
-                        product_id: Number(formData.product_id),
+                        product_id: Number(masterListFilter),
                     },
                     {
                         headers: {
@@ -160,7 +230,7 @@ const Staff = () => {
                     "http://localhost:4000/api/staff/",
                     {
                         name: formData.name.trim(),
-                        product_id: Number(formData.product_id),
+                        product_id: Number(masterListFilter),
                     },
                     {
                         headers: {
@@ -176,26 +246,30 @@ const Staff = () => {
                 setMessage(
                     response.data.message ||
                     (editId
-                        ? "Staff updated successfully"
-                        : "Staff created successfully")
+                        ? "Master updated successfully"
+                        : "Master created successfully")
                 );
 
                 setFormData({
                     name: "",
-                    product_id: "",
                 });
 
                 setEditId(null);
                 setShowForm(false);
 
-                getStaffList({ p: page, l: limit, s: search });
+                getStaffList({
+                    p: page,
+                    l: limit,
+                    s: search.trim(),
+                    productId: masterListFilter,
+                });
             }
 
         } catch (error) {
             console.error(
                 editId
-                    ? "Update Staff Error:"
-                    : "Create Staff Error:",
+                    ? "Update Master Error:"
+                    : "Create Master Error:",
                 error
             );
 
@@ -218,8 +292,8 @@ const Staff = () => {
 
         setFormData({
             name: staff.name || "",
-            product_id: staff.product?.id || "",
         });
+        setMasterListFilter(String(staff.product?.id || ""));
 
         setShowForm(true);
 
@@ -257,15 +331,20 @@ const Staff = () => {
 
                 setMessage(
                     response.data.message ||
-                    "Staff deleted successfully"
+                    "Master deleted successfully"
                 );
 
-                getStaffList({ p: page, l: limit, s: search });
+                getStaffList({
+                    p: page,
+                    l: limit,
+                    s: search.trim(),
+                    productId: masterListFilter,
+                });
             }
 
         } catch (error) {
 
-            console.error("Delete Staff Error:", error);
+            console.error("Delete Master Error:", error);
 
             setError(
                 error.response?.data?.message ||
@@ -285,7 +364,6 @@ const Staff = () => {
 
         setFormData({
             name: "",
-            product_id: "",
         });
 
         setError("");
@@ -301,25 +379,31 @@ const Staff = () => {
         }
 
         searchRef.current = setTimeout(() => {
-            getStaffList({ p: 1, l: limit, s: search });
+            getStaffList({
+                p: 1,
+                l: limit,
+                s: search.trim(),
+                productId: masterListFilter,
+            });
         }, 400);
 
         return () => clearTimeout(searchRef.current);
-    }, [getStaffList, limit, search]);
+    }, [getStaffList, limit, masterListFilter, productFilter, search]);
 
     const onPage = (event) => {
-    const newPage = Math.floor(event.first / event.rows) + 1;
-    const newLimit = event.rows;
+        const newPage = Math.floor(event.first / event.rows) + 1;
+        const newLimit = event.rows;
 
-    setPage(newPage);
-    setLimit(newLimit);
+        setPage(newPage);
+        setLimit(newLimit);
 
-    getStaffList({
-        p: newPage,
-        l: newLimit,
-        s: search,
-    });
-};
+        getStaffList({
+            p: newPage,
+            l: newLimit,
+            s: search.trim(),
+            productId: masterListFilter,
+        });
+    };
 
     return (
         <div className="container-fluid p-4">
@@ -332,11 +416,11 @@ const Staff = () => {
 
                 <div>
                     <h2 className="fw-bold mb-1">
-                        Staff
+                        Master
                     </h2>
 
                     <p className="text-muted mb-0">
-                        Staff management
+                        Master management
                     </p>
                 </div>
 
@@ -354,7 +438,7 @@ const Staff = () => {
 
                     }}
                 >
-                    {showForm ? "Close" : "+ Add Staff"}
+                    {showForm ? "Close" : "+ Add Master"}
                 </button>
 
             </div>
@@ -390,8 +474,8 @@ const Staff = () => {
 
                         <h5 className="mb-0">
                             {editId
-                                ? "Edit Staff"
-                                : "Add Staff"}
+                                ? "Edit Master"
+                                : "Add Master"}
                         </h5>
 
                     </div>
@@ -402,54 +486,21 @@ const Staff = () => {
 
                             <div className="row">
 
-                                {/* Staff Name */}
+                                {/* Master Name */}
 
                                 <div className="col-md-6 mb-3">
 
                                     <label className="form-label fw-semibold">
-                                        Staff Name
+                                        Master Name
                                     </label>
 
                                     <input
                                         type="text"
                                         name="name"
                                         className="form-control"
-                                        placeholder="Enter staff name"
                                         value={formData.name}
                                         onChange={handleChange}
                                     />
-
-                                </div>
-
-                                {/* Product */}
-
-                                <div className="col-md-6 mb-3">
-
-                                    <label className="form-label fw-semibold">
-                                        Product
-                                    </label>
-
-                                    <select
-                                        name="product_id"
-                                        className="form-select"
-                                        value={formData.product_id}
-                                        onChange={handleChange}
-                                    >
-
-                                        <option value="">
-                                            Select Product
-                                        </option>
-
-                                        {products.map((product) => (
-                                            <option
-                                                key={product.id}
-                                                value={product.id}
-                                            >
-                                                {product.name}
-                                            </option>
-                                        ))}
-
-                                    </select>
 
                                 </div>
 
@@ -465,8 +516,8 @@ const Staff = () => {
                                 {loading
                                     ? "Saving..."
                                     : editId
-                                        ? "Update Staff"
-                                        : "Save Staff"}
+                                        ? "Update Master"
+                                        : "Save Master"}
                             </button>
 
                             <button
@@ -497,7 +548,7 @@ const Staff = () => {
                         <div className="col-md-6">
 
                             <h5 className="mb-0">
-                                Staff List
+                                Master List
                             </h5>
 
                         </div>
@@ -507,7 +558,7 @@ const Staff = () => {
                             <input
                                 type="text"
                                 className="form-control"
-                                placeholder="Search staff or product..."
+                                placeholder="Search master or product..."
                                 value={search}
                                 onChange={(e) =>
                                     setSearch(e.target.value)
@@ -518,94 +569,118 @@ const Staff = () => {
 
                     </div>
 
+                    <div className="row mt-3">
+
+                        <div className="col-md-6">
+
+                            <select
+                                className="form-select"
+                                value={productFilter}
+                                onChange={(e) => {
+                                    setProductFilter(e.target.value);
+                                    setPage(1);
+                                }}
+                            >
+                                {products.map((product) => (
+                                    <option
+                                        key={product.id}
+                                        value={product.id}
+                                    >
+                                        {product.name}
+                                    </option>
+                                ))}
+                            </select>
+
+                        </div>
+
+                        <div className="col-md-6 mt-3 mt-md-0">
+
+                            <select
+                                className="form-select"
+                                value={masterListFilter}
+                                onChange={(e) => {
+                                    setMasterListFilter(e.target.value);
+                                    setPage(1);
+                                }}
+                            >
+
+
+                                {masterListOptions.map((item) => (
+                                    <option
+                                        key={item.id}
+                                        value={item.id}
+                                    >
+                                        {item.name} 
+                                    </option>
+                                ))}
+                            </select>
+
+                        </div>
+
+                    </div>
+
                 </div>
 
                 <div className="p-3">
-                  <DataTable
-    value={staffList}
-    lazy
-    paginator
-    first={(page - 1) * limit}
-    rows={limit}
-    totalRecords={totalRecords}
+                    <DataTable
+                        value={staffList}
+                        lazy
+                        paginator
+                        first={(page - 1) * limit}
+                        rows={limit}
+                        totalRecords={totalRecords}
 
-    onPage={onPage}
+                        onPage={onPage}
 
-    rowsPerPageOptions={[ 5, 10, 20, 50]}
+                        rowsPerPageOptions={[5, 10, 20, 50]}
 
-    paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown CurrentPageReport"
+                        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown CurrentPageReport"
 
-    currentPageReportTemplate="Showing {first} to {last} of {totalRecords} records"
+                        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} records"
 
-    loading={listLoading}
+                        loading={listLoading}
 
-    responsiveLayout="scroll"
+                        responsiveLayout="scroll"
 
-    emptyMessage="No staff found"
->
-    <Column
-        header="#"
-        body={(rowData, options) =>
-            (page - 1) * limit + options.rowIndex + 1
-        }
-        style={{ width: "60px" }}
-    />
+                        emptyMessage="No staff found"
+                    >
+                        <Column
+                            header="#"
+                            body={(rowData, options) =>
+                                (page - 1) * limit + options.rowIndex + 1
+                            }
+                            style={{ width: "60px" }}
+                        />
 
-    <Column
-        field="name"
-        header="Staff Name"
-    />
+                        <Column
+                            field="name"
+                            header="Master Name"
+                        />
+ 
+                       
+                        <Column
+                            header="Action"
+                            body={(rowData) => (
+                                <>
+                                    <button
+                                        type="button"
+                                        className="btn btn-sm btn-outline-primary me-2"
+                                        onClick={() => handleEdit(rowData)}
+                                    >
+                                        Edit
+                                    </button>
 
-    <Column
-        header="Product"
-        body={(rowData) => (
-            <span className="badge bg-primary">
-                {rowData.product?.name || "-"}
-            </span>
-        )}
-    />
-
-    <Column
-        header="Created At"
-        body={(rowData) =>
-            rowData.created_at
-                ? new Date(rowData.created_at).toLocaleString()
-                : "-"
-        }
-    />
-
-    <Column
-        header="Updated At"
-        body={(rowData) =>
-            rowData.updated_at
-                ? new Date(rowData.updated_at).toLocaleString()
-                : "-"
-        }
-    />
-
-    <Column
-        header="Action"
-        body={(rowData) => (
-            <>
-                <button
-                    type="button"
-                    className="btn btn-sm btn-outline-primary me-2"
-                    onClick={() => handleEdit(rowData)}
-                >
-                    Edit
-                </button>
-
-                <button
-                    type="button"
-                    className="btn btn-sm btn-outline-danger"
-                    onClick={() => handleDelete(rowData.id)}
-                >
-                    Delete
-                </button>
-            </>
-        )}
-    />
-</DataTable>
+                                    <button
+                                        type="button"
+                                        className="btn btn-sm btn-outline-danger"
+                                        onClick={() => handleDelete(rowData.id)}
+                                    >
+                                        Delete
+                                    </button>
+                                </>
+                            )}
+                        />
+                    </DataTable>
                 </div>
 
             </div>
@@ -614,4 +689,4 @@ const Staff = () => {
     );
 };
 
-export default Staff;
+export default Master;

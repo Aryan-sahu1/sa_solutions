@@ -11,18 +11,32 @@ import {
     FaChevronDown,
     FaChevronRight,
     FaLayerGroup,
-    FaKey 
+    FaKey,
+    FaShoppingCart,
+    FaTruckLoading,
+    FaTachometerAlt as FaMeter,
+    FaTint,
+    FaMoneyBillWave,
+    FaClipboardList,
+    FaFileInvoice,
+    FaShip
 } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext";
 
 const menuItems = [
     { to: "/dashboard", label: "Dashboard", icon: <FaTachometerAlt /> },
-     {
+    {
         label: "Entry",
         icon: <FaLayerGroup />,
         children: [
-            // { to: "/product", label: "Accounts", icon: <FaBoxOpen /> },
-            { to: "/add-data", label: "Add Item", icon: <FaBoxOpen /> },
+            { to: "/sale", label: "Sale", icon: <FaShoppingCart /> },
+            { to: "/purchase", label: "Purchase", icon: <FaTruckLoading /> },
+            { to: "/meter", label: "Meter", icon: <FaMeter /> },
+            { to: "/leak", label: "Leak", icon: <FaTint /> },
+            { to: "/cash-receipt", label: "Cash Receipt / Payment", icon: <FaMoneyBillWave /> },
+            { to: "/voucher-entry", label: "Voucher Entry", icon: <FaClipboardList /> },
+            { to: "/bill-generation", label: "Bill Generation", icon: <FaFileInvoice /> },
+            { to: "/ship-entry", label: "Ship Entry", icon: <FaShip /> },
         ],
     },
     {
@@ -116,9 +130,8 @@ const Sidebar = () => {
 
             {/* Sidebar — single element, background + transform on same node */}
             <div
-                className={`sidebar-container bg-dark text-white d-flex flex-column ${
-                    isOpen ? "sidebar-open" : ""
-                }`}
+                className={`sidebar-container bg-dark text-white d-flex flex-column ${isOpen ? "sidebar-open" : ""
+                    }`}
             >
                 {/* Logo */}
                 <div className="p-4 border-bottom d-none d-md-block">
@@ -139,9 +152,8 @@ const Sidebar = () => {
                                     <button
                                         type="button"
                                         onClick={() => toggleSubmenu(item.label)}
-                                        className={`sidebar-link sidebar-submenu-button text-white w-100 d-flex align-items-center justify-content-between gap-2 p-3 rounded border-0 ${
-                                            hasActiveChild ? "sidebar-link-active" : ""
-                                        }`}
+                                        className={`sidebar-link sidebar-submenu-button text-white w-100 d-flex align-items-center justify-content-between gap-2 p-3 rounded border-0 ${hasActiveChild ? "sidebar-link-active" : ""
+                                            }`}
                                         aria-expanded={isSubmenuOpen}
                                     >
                                         <span className="d-flex align-items-center gap-2">
@@ -166,10 +178,9 @@ const Sidebar = () => {
                                                     end
                                                     onClick={closeSidebar}
                                                     className={({ isActive }) =>
-                                                        `d-flex align-items-center gap-2 text-decoration-none px-3 py-2 rounded mb-1 sidebar-link sidebar-submenu-link text-white ${
-                                                            isActive
-                                                                ? "sidebar-link-active"
-                                                                : ""
+                                                        `d-flex align-items-center gap-2 text-decoration-none px-3 py-2 rounded mb-1 sidebar-link sidebar-submenu-link text-white ${isActive
+                                                            ? "sidebar-link-active"
+                                                            : ""
                                                         }`
                                                     }
                                                 >
@@ -190,8 +201,7 @@ const Sidebar = () => {
                                 end
                                 onClick={closeSidebar}
                                 className={({ isActive }) =>
-                                    `d-flex align-items-center gap-2 text-decoration-none p-3 rounded mb-2 sidebar-link text-white ${
-                                        isActive ? "sidebar-link-active" : ""
+                                    `d-flex align-items-center gap-2 text-decoration-none p-3 rounded mb-2 sidebar-link text-white ${isActive ? "sidebar-link-active" : ""
                                     }`
                                 }
                             >

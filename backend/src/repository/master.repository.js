@@ -2,7 +2,7 @@ const db = require("../config/db");
 
 const create = async (body) => {
     const sql = `
-        INSERT INTO staff_categories (product_id, name)
+        INSERT INTO master (sid, name)
         VALUES (?, ?)
     `;
 
@@ -18,7 +18,8 @@ const findAll = async ({
     limit = 10,
     page = 1,
     search = "",
-    productId = ""
+    productId = "",
+    masterListName = ""
 } = {}) => {
     const offset = (page - 1) * limit;
 
@@ -26,8 +27,13 @@ const findAll = async ({
     const params = [];
 
     if (productId && String(productId).trim() !== "") {
-        where += ` AND sc.product_id = ?`;
+        where += ` AND sc.sid = ?`;
         params.push(productId);
+    }
+
+    if (masterListName && String(masterListName).trim() !== "") {
+        where += ` AND sc.name = ?`;
+        params.push(String(masterListName).trim());
     }
 
     if (search && String(search).trim().length) {
@@ -39,24 +45,24 @@ const findAll = async ({
     const countSql = `
         SELECT
             COUNT(*) AS total
-        FROM staff_categories sc
-        LEFT JOIN products p
-            ON p.id = sc.product_id
+        FROM master sc
+        LEFT JOIN masterlist p
+            ON p.id = sc.sid
         ${where}
     `;
 
     const dataSql = `
         SELECT
             sc.id,
-            sc.product_id,
+            sc.sid,
             sc.name,
             sc.created_at,
             sc.updated_at,
             sc.deleted_at,
             p.name AS product_name
-        FROM staff_categories sc
-        LEFT JOIN products p
-            ON p.id = sc.product_id
+        FROM master sc
+        LEFT JOIN masterlist p
+            ON p.id = sc.sid
         ${where}
         ORDER BY sc.id DESC
         LIMIT ?
@@ -78,12 +84,28 @@ const findById = async (id) => {
     const sql = `
         SELECT 
             id,
-            product_id,
+            sid,
             name,
             created_at,
             updated_at,
             deleted_at
-        FROM staff_categories
+        FROM master
+        WHERE id = ?
+        AND deleted_at IS NULL
+    `;
+
+    const [rows] = await db.query(sql, [id]);
+
+    return rows[0] || null;
+};
+
+const findMasterListById = async (id) => {
+    const sql = `
+        SELECT
+            id,
+            pid,
+            name
+        FROM masterlist
         WHERE id = ?
         AND deleted_at IS NULL
     `;
@@ -95,8 +117,8 @@ const findById = async (id) => {
 
 const update = async (id, body) => {
     const sql = `
-        UPDATE staff_categories
-        SET product_id = ?,
+        UPDATE master
+        SET sid = ?,
             name = ?
         WHERE id = ?
         AND deleted_at IS NULL
@@ -113,7 +135,7 @@ const update = async (id, body) => {
 
 const remove = async (id) => {
     const sql = `
-        UPDATE staff_categories
+        UPDATE master
         SET deleted_at = CURRENT_TIMESTAMP
         WHERE id = ?
     `;
@@ -127,6 +149,7 @@ module.exports = {
     create,
     findAll,
     findById,
+    findMasterListById,
     update,
     remove
 };

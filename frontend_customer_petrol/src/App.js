@@ -22,6 +22,8 @@ import StaffMember from "./component/StaffMember";
 import VehicleMaster from "./component/VehicleMaster";
 import { AuthProvider } from "./context/AuthContext";
 import AddItem from "./component/AddItem";
+import Voucher from "./component/Voucher";
+import Leak from "./component/Leak";
 
  
 
@@ -102,6 +104,15 @@ const App = () => {
                          <Route
                             path="/add-data"
                             element={<AddItem />}
+                        />
+                         <Route
+                            path="/voucher-entry"
+                            element={<Voucher />}
+                        />
+
+                          <Route
+                            path="/leak"
+                            element={<Leak />}
                         />
                     </Route>
 

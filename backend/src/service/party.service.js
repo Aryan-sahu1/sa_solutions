@@ -9,9 +9,7 @@ const createError = (message, statusCode = 400) => {
 };
 
 const validateParty = (body) => {
-    if (body.openbal === undefined || body.openbal === null || body.openbal === "") {
-        throw createError("openbal is required");
-    }
+    
 
     if (!body.sid) {
         throw createError("sid is required");

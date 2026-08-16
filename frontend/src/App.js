@@ -9,15 +9,13 @@ import {
 import CompanyLogin from "./component/CompanyLogin";
 import DashboardLayout from "./Dashboard/DashboardLayout";
 import Dashboard from "./Dashboard/Dashboard";
-import ProtectedRoute from "./ProtectedRoute/ProtectedRoute";
-import Staff from "./component/Staff";
+import ProtectedRoute from "./ProtectedRoute/ProtectedRoute"; 
 import Customers from "./component/Customers";
 import ChangePassword from "./component/ChangePassword";
 import Product from "./component/Product";
 import THeadMaster from "./component/THeadMaster";
-
- 
-
+import MasterList from "./component/MasterList";
+import Master from "./component/Master";
  
 const App = () => {
     return (
@@ -49,8 +47,8 @@ const App = () => {
                     />
 
                     <Route
-                        path="/staff"
-                        element={<Staff />}
+                        path="/masters"
+                        element={<Master />}
                     />
                     <Route
                         path="/change-password"
@@ -65,6 +63,10 @@ const App = () => {
                     <Route
                         path="/t-head-master"
                         element={<THeadMaster />}
+                    />
+                      <Route
+                        path="/master-list"
+                        element={<MasterList />}
                     />
                 </Route>
 

@@ -1,32 +1,33 @@
-const staffCategoryService = require("../service/staff.service");
+const masterListService = require("../service/masterList.service");
 
-const create = async (req, res,next) => {
+const create = async (req, res, next) => {
     try {
-        const result = await staffCategoryService.create(req.body);
+        const result = await masterListService.create(req.body);
 
         return res.status(201).json({
             status: true,
-            message: "Staff category created successfully",
+            message: "Master created successfully",
             data: result
         });
 
     } catch (error) {
-       next(error)
+        next(error)
     }
 };
 
-const findAll = async (req, res,next) => {
+const findAll = async (req, res, next) => {
     try {
-        const { limit, page, search } = req.query;
+        const { limit, page, search, product_id, pid } = req.query;
 
         const options = {
             limit: parseInt(limit, 10) || 10,
             page: parseInt(page, 10) || 1,
-            search: search ? String(search) : ""
+            search: search ? String(search) : "",
+            productId: product_id || pid || ""
         };
-     
 
-        const result = await staffCategoryService.findAll(options);
+
+        const result = await masterListService.findAll(options);
         const totalPages = Math.ceil(result.total / options.limit);
         return res.status(200).json({
             status: true,
@@ -36,12 +37,12 @@ const findAll = async (req, res,next) => {
                 total: result.total || 0,
                 page: options.page,
                 limit: options.limit,
-                totalPages:totalPages
+                totalPages: totalPages
             }
         });
 
     } catch (error) {
-       next(error)
+        next(error)
     }
 };
 
@@ -56,7 +57,7 @@ const findByCustomerProduct = async (req, res, next) => {
             productId: req.customer?.product_id
         };
 
-        const result = await staffCategoryService.findAll(options);
+        const result = await masterListService.findAll(options);
         const totalPages = Math.ceil(result.total / options.limit);
 
         return res.status(200).json({
@@ -75,11 +76,11 @@ const findByCustomerProduct = async (req, res, next) => {
     }
 };
 
-const findById = async (req, res,next) => {
+const findById = async (req, res, next) => {
     try {
         const { id } = req.params;
 
-        const data = await staffCategoryService.findById(id);
+        const data = await masterListService.findById(id);
 
         return res.status(200).json({
             status: true,
@@ -88,22 +89,22 @@ const findById = async (req, res,next) => {
         });
 
     } catch (error) {
-       next(error)
+        next(error)
     }
 };
 
-const update = async (req, res,next) => {
+const update = async (req, res, next) => {
     try {
         const { id } = req.params;
 
-        const result = await staffCategoryService.update(
+        const result = await masterListService.update(
             id,
             req.body
         );
 
         return res.status(200).json({
             status: true,
-            message: "Staff category updated successfully",
+            message: "Master updated successfully",
             data: result
         });
 
@@ -112,20 +113,20 @@ const update = async (req, res,next) => {
     }
 };
 
-const remove = async (req, res,next) => {
+const remove = async (req, res, next) => {
     try {
         const { id } = req.params;
 
-        const result = await staffCategoryService.remove(id);
+        const result = await masterListService.remove(id);
 
         return res.status(200).json({
             status: true,
-            message: "Staff category deleted successfully",
+            message: "Master deleted successfully",
             data: result
         });
 
     } catch (error) {
-       next(error);
+        next(error);
     }
 };
 

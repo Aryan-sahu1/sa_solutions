@@ -4,14 +4,12 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { useAuth } from "../context/AuthContext";
 
+const API_BASE_URL = "http://localhost:4000/api";
+
 const initialFormData = {
-    name: "",
-    address: "",
-    phone_no: "",
-    openbal: "",
-    sid: "",
-    sid1: "",
-    salary: "",
+    date: "",
+    iid: "",
+    qty: "",
 };
 
 const toInputValue = (value) => {
@@ -22,11 +20,37 @@ const toInputValue = (value) => {
     return String(value);
 };
 
-const Party = () => {
+const getCurrentDateTimeValue = () => {
+    const now = new Date();
+    const timezoneOffset = now.getTimezoneOffset() * 60000;
+
+    return new Date(now.getTime() - timezoneOffset)
+        .toISOString()
+        .slice(0, 16);
+};
+
+const toDateTimeInputValue = (value) => {
+    if (!value) {
+        return "";
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return "";
+    }
+
+    const timezoneOffset = date.getTimezoneOffset() * 60000;
+
+    return new Date(date.getTime() - timezoneOffset)
+        .toISOString()
+        .slice(0, 16);
+};
+
+const Leak = () => {
     const { authHeaders } = useAuth();
-    const [parties, setParties] = useState([]);
-    const [headMasters, setHeadMasters] = useState([]);
-    const [tHeadMasters, setTHeadMasters] = useState([]);
+    const [entries, setEntries] = useState([]);
+    const [stockItems, setStockItems] = useState([]);
     const [formData, setFormData] = useState(initialFormData);
     const [showForm, setShowForm] = useState(false);
     const [editId, setEditId] = useState(null);
@@ -45,9 +69,9 @@ const Party = () => {
 
     const getDefaultFormData = useCallback(() => ({
         ...initialFormData,
-        sid: toInputValue(headMasters[0]?.id),
-        sid1: toInputValue(tHeadMasters[0]?.id),
-    }), [headMasters, tHeadMasters]);
+        date: getCurrentDateTimeValue(),
+        iid: toInputValue(stockItems[0]?.id),
+    }), [stockItems]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -58,7 +82,7 @@ const Party = () => {
         return () => clearTimeout(timer);
     }, [search]);
 
-    const getParties = useCallback(
+    const getEntries = useCallback(
         async (currentPage, currentLimit, currentSearch) => {
             try {
                 setListLoading(true);
@@ -73,36 +97,33 @@ const Party = () => {
                     params.search = currentSearch;
                 }
 
-                const response = await axios.get(
-                    "http://localhost:4000/api/party",
-                    {
-                        params,
-                        headers: {
-                            ...authHeaders,
-                            "Cache-Control": "no-cache",
-                            Pragma: "no-cache",
-                        },
-                    }
-                );
+                const response = await axios.get(`${API_BASE_URL}/leak`, {
+                    params,
+                    headers: {
+                        ...authHeaders,
+                        "Cache-Control": "no-cache",
+                        Pragma: "no-cache",
+                    },
+                });
 
                 if (response.data.status) {
-                    setParties(response.data.data || []);
+                    setEntries(response.data.data || []);
                     setTotalRecords(
                         Number(response.data.pagination?.total || 0)
                     );
                     return;
                 }
 
-                setParties([]);
+                setEntries([]);
                 setTotalRecords(0);
-                setError(response.data.message || "No parties found");
+                setError(response.data.message || "No leak entries found");
             } catch (err) {
-                console.error("Party list error:", err);
-                setParties([]);
+                console.error("Leak entry list error:", err);
+                setEntries([]);
                 setTotalRecords(0);
                 setError(
                     err.response?.data?.message ||
-                    "Failed to fetch parties"
+                    "Failed to fetch leak entries"
                 );
             } finally {
                 setListLoading(false);
@@ -111,71 +132,45 @@ const Party = () => {
         [authHeaders]
     );
 
-    const getHeadOptions = useCallback(async () => {
+    const getOptions = useCallback(async () => {
         if (!authHeaders.Authorization) {
             return;
         }
 
         try {
-            const [headResult, tHeadResult] = await Promise.allSettled([
-                axios.get("http://localhost:4000/api/head-master", {
-                    params: {
-                        page: 1,
-                        limit: 1000,
-                    },
-                    headers: authHeaders,
-                }),
-                axios.get("http://localhost:4000/api/t-head-master", {
-                    params: {
-                        page: 1,
-                        limit: 1000,
-                    },
-                    headers: authHeaders,
-                }),
-            ]);
+            const response = await axios.get(`${API_BASE_URL}/stock-item`, {
+                params: {
+                    page: 1,
+                    limit: 1000,
+                },
+                headers: authHeaders,
+            });
 
-            let nextHeadMasters = [];
-            let nextTHeadMasters = [];
+            const nextStockItems = response.data.status
+                ? response.data.data || []
+                : [];
 
-            if (
-                headResult.status === "fulfilled" &&
-                headResult.value.data.status
-            ) {
-                const headResponse = headResult.value;
-                nextHeadMasters = headResponse.data.data || [];
-            }
-
-            if (
-                tHeadResult.status === "fulfilled" &&
-                tHeadResult.value.data.status
-            ) {
-                const tHeadResponse = tHeadResult.value;
-                nextTHeadMasters = tHeadResponse.data.data || [];
-            }
-
-            setHeadMasters(nextHeadMasters);
-            setTHeadMasters(nextTHeadMasters);
+            setStockItems(nextStockItems);
             setFormData((current) => ({
                 ...current,
-                sid: current.sid || toInputValue(nextHeadMasters[0]?.id),
-                sid1: current.sid1 || toInputValue(nextTHeadMasters[0]?.id),
+                iid: current.iid || toInputValue(nextStockItems[0]?.id),
             }));
         } catch (err) {
-            console.error("Party head option error:", err);
+            console.error("Leak option error:", err);
             setError(
                 err.response?.data?.message ||
-                "Failed to fetch head options"
+                "Failed to fetch stock item options"
             );
         }
     }, [authHeaders]);
 
     useEffect(() => {
-        getHeadOptions();
-    }, [getHeadOptions]);
+        getOptions();
+    }, [getOptions]);
 
     useEffect(() => {
-        getParties(page, limit, debouncedSearch);
-    }, [page, limit, debouncedSearch, getParties]);
+        getEntries(page, limit, debouncedSearch);
+    }, [page, limit, debouncedSearch, getEntries]);
 
     const resetForm = () => {
         setFormData(getDefaultFormData());
@@ -189,6 +184,30 @@ const Party = () => {
             ...current,
             [name]: value,
         }));
+    };
+
+    const handleFormKeyDown = (e) => {
+        if (e.key !== "Enter" || e.target.tagName === "TEXTAREA") {
+            return;
+        }
+
+        const focusableFields = Array.from(
+            e.currentTarget.querySelectorAll(
+                "input:not([type='hidden']), select, textarea, button"
+            )
+        ).filter(
+            (field) =>
+                !field.disabled &&
+                !field.readOnly &&
+                field.offsetParent !== null
+        );
+        const currentIndex = focusableFields.indexOf(e.target);
+        const nextField = focusableFields[currentIndex + 1];
+
+        if (nextField) {
+            e.preventDefault();
+            nextField.focus();
+        }
     };
 
     const handleAdd = () => {
@@ -210,19 +229,23 @@ const Party = () => {
         setError("");
 
         const payload = {
-            name: toInputValue(formData.name).trim(),
-            address: toInputValue(formData.address).trim(),
-            phone_no: toInputValue(formData.phone_no).trim(),
-            openbal: toInputValue(formData.openbal).trim(),
-            sid: formData.sid,
-            sid1: formData.sid1,
-            salary: toInputValue(formData.salary).trim(),
+            date: toInputValue(formData.date).trim(),
+            iid: formData.iid,
+            qty: toInputValue(formData.qty).trim(),
         };
 
-         
+        if (!payload.date) {
+            setError("Date is required");
+            return;
+        }
 
-        if (!payload.sid) {
-            setError("Head master is required");
+        if (!payload.iid) {
+            setError("Stock item is required");
+            return;
+        }
+
+        if (!payload.qty) {
+            setError("Qty is required");
             return;
         }
 
@@ -237,54 +260,42 @@ const Party = () => {
             };
 
             const response = editId
-                ? await axios.put(
-                    `http://localhost:4000/api/party/${editId}`,
-                    payload,
-                    config
-                )
-                : await axios.post(
-                    "http://localhost:4000/api/party",
-                    payload,
-                    config
-                );
+                ? await axios.put(`${API_BASE_URL}/leak/${editId}`, payload, config)
+                : await axios.post(`${API_BASE_URL}/leak`, payload, config);
 
             if (response.data.status) {
                 setMessage(
                     response.data.message ||
                     (editId
-                        ? "Party updated successfully"
-                        : "Party created successfully")
+                        ? "Leak entry updated successfully"
+                        : "Leak entry created successfully")
                 );
 
                 resetForm();
                 setShowForm(false);
                 setPage(1);
-                await getParties(1, limit, debouncedSearch);
+                await getEntries(1, limit, debouncedSearch);
                 return;
             }
 
-            setError(response.data.message || "Failed to save party");
+            setError(response.data.message || "Failed to save leak entry");
         } catch (err) {
-            console.error("Save party error:", err);
+            console.error("Save leak entry error:", err);
             setError(
                 err.response?.data?.message ||
-                "Failed to save party"
+                "Failed to save leak entry"
             );
         } finally {
             setLoading(false);
         }
     };
 
-    const handleEdit = (party) => {
-        setEditId(party.id);
+    const handleEdit = (entry) => {
+        setEditId(entry.id);
         setFormData({
-            name: toInputValue(party.name),
-            address: toInputValue(party.address),
-            phone_no: toInputValue(party.phone_no),
-            openbal: toInputValue(party.openbal),
-            sid: toInputValue(party.sid),
-            sid1: toInputValue(party.sid1),
-            salary: toInputValue(party.salary),
+            date: toDateTimeInputValue(entry.date),
+            iid: toInputValue(entry.iid),
+            qty: toInputValue(entry.qty),
         });
         setShowForm(true);
         setMessage("");
@@ -298,7 +309,7 @@ const Party = () => {
 
     const handleDelete = async (id) => {
         const confirmDelete = window.confirm(
-            "Are you sure you want to delete this party?"
+            "Are you sure you want to delete this leak entry?"
         );
 
         if (!confirmDelete) {
@@ -309,17 +320,14 @@ const Party = () => {
             setMessage("");
             setError("");
 
-            const response = await axios.delete(
-                `http://localhost:4000/api/party/${id}`,
-                {
-                    headers: authHeaders,
-                }
-            );
+            const response = await axios.delete(`${API_BASE_URL}/leak/${id}`, {
+                headers: authHeaders,
+            });
 
             if (response.data.status) {
                 setMessage(
                     response.data.message ||
-                    "Party deleted successfully"
+                    "Leak entry deleted successfully"
                 );
 
                 if (editId === id) {
@@ -327,16 +335,16 @@ const Party = () => {
                     setShowForm(false);
                 }
 
-                await getParties(page, limit, debouncedSearch);
+                await getEntries(page, limit, debouncedSearch);
                 return;
             }
 
-            setError(response.data.message || "Failed to delete party");
+            setError(response.data.message || "Failed to delete leak entry");
         } catch (err) {
-            console.error("Delete party error:", err);
+            console.error("Delete leak entry error:", err);
             setError(
                 err.response?.data?.message ||
-                "Failed to delete party"
+                "Failed to delete leak entry"
             );
         }
     };
@@ -350,12 +358,12 @@ const Party = () => {
         return (page - 1) * limit + options.rowIndex + 1;
     };
 
-    const headBodyTemplate = (row) => {
-        return row.head_master_name || "-";
-    };
-
-    const tHeadBodyTemplate = (row) => {
-        return row.t_head_master_name || "-";
+    const dateBodyTemplate = (row) => {
+        if (!row.date) {
+            return "-";
+        }
+        console.log(row.date, "row.daterow.date")
+        return new Date(row.date).toLocaleDateString('en-GB');
     };
 
     const actionBodyTemplate = (row) => {
@@ -383,9 +391,9 @@ const Party = () => {
         <div className="container-fluid p-4">
             <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
                 <div>
-                    <h2 className="fw-bold mb-1">Party</h2>
+                    <h2 className="fw-bold mb-1">Leak</h2>
                     <p className="text-muted mb-0">
-                        Create and manage parties
+                        Create and manage leak entries
                     </p>
                 </div>
 
@@ -401,7 +409,7 @@ const Party = () => {
                         handleAdd();
                     }}
                 >
-                    {showForm ? "Close" : "+ Add Party"}
+                    {showForm ? "Close" : "+ Add Leak"}
                 </button>
             </div>
 
@@ -421,102 +429,39 @@ const Party = () => {
                 <div className="card shadow-sm border-0 mb-4">
                     <div className="card-header bg-white">
                         <h5 className="mb-0">
-                            {editId ? "Edit Party" : "Add Party"}
+                            {editId ? "Edit Leak" : "Add Leak"}
                         </h5>
                     </div>
 
                     <div className="card-body">
-                        <form onSubmit={handleSubmit}>
-                            <div className="row g-3">
+                        <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown}>
+                            <div className="row g-3 align-items-end">
                                 <div className="col-md-4">
                                     <label className="form-label fw-semibold">
-                                        Name
+                                        Date
                                     </label>
                                     <input
-                                        type="text"
+                                        type="date"
                                         className="form-control"
-                                        name="name"
-                                        placeholder="Enter party name"
-                                        value={formData.name}
-                                        onChange={handleChange}
-                                    />
-                                </div>
-
-                                <div className="col-md-4">
-                                    <label className="form-label fw-semibold">
-                                        Phone No
-                                    </label>
-                                    <input
-                                        type="text"
-                                        className="form-control"
-                                        name="phone_no"
-                                        placeholder="Enter phone number"
-                                        value={formData.phone_no}
+                                        name="date"
+                                        value={formData.date}
                                         onChange={handleChange}
                                     />
                                 </div>
 
                                 <div className="col-md-4">
                                     <label className="form-label fw-semibold">
-                                        Opening Balance
-                                    </label>
-                                    <input
-                                        type="text"
-                                        className="form-control"
-                                        name="openbal"
-                                        placeholder="Enter opening balance"
-                                        value={formData.openbal}
-                                        onChange={handleChange}
-                                    />
-                                </div>
-
-                                <div className="col-md-6">
-                                    <label className="form-label fw-semibold">
-                                        Address
-                                    </label>
-                                    <input
-                                        type="text"
-                                        className="form-control"
-                                        name="address"
-                                        placeholder="Enter address"
-                                        value={formData.address}
-                                        onChange={handleChange}
-                                    />
-                                </div>
-
-                                <div className="col-md-3">
-                                    <label className="form-label fw-semibold">
-                                        Head Master
+                                        Stock Item
                                     </label>
                                     <select
                                         className="form-select"
-                                        name="sid"
-                                        value={formData.sid}
+                                        name="iid"
+                                        value={formData.iid}
                                         onChange={handleChange}
                                     >
-                                
-                                        {headMasters.map((head) => (
-                                            <option key={head.id} value={head.id}>
-                                                {head.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div className="col-md-3">
-                                    <label className="form-label fw-semibold">
-                                        T Head Master
-                                    </label>
-                                    <select
-                                        className="form-select"
-                                        name="sid1"
-                                        value={formData.sid1}
-                                        onChange={handleChange}
-                                    >
-                                     
-                                        {tHeadMasters.map((head) => (
-                                            <option key={head.id} value={head.id}>
-                                                {head.name}
+                                        {stockItems.map((item) => (
+                                            <option key={item.id} value={item.id}>
+                                                {item.name}
                                             </option>
                                         ))}
                                     </select>
@@ -524,14 +469,14 @@ const Party = () => {
 
                                 <div className="col-md-4">
                                     <label className="form-label fw-semibold">
-                                        Salary
+                                        Qty
                                     </label>
                                     <input
-                                        type="text"
+                                        type="number"
                                         className="form-control"
-                                        name="salary"
-                                        placeholder="Enter salary"
-                                        value={formData.salary}
+                                        name="qty"
+                                        placeholder="Enter qty"
+                                        value={formData.qty}
                                         onChange={handleChange}
                                     />
                                 </div>
@@ -545,8 +490,8 @@ const Party = () => {
                                         {loading
                                             ? "Saving..."
                                             : editId
-                                                ? "Update Party"
-                                                : "Save Party"}
+                                                ? "Update"
+                                                : "Save"}
                                     </button>
 
                                     <button
@@ -567,14 +512,14 @@ const Party = () => {
                 <div className="card-header bg-white p-3">
                     <div className="row align-items-center">
                         <div className="col-md-6">
-                            <h5 className="mb-0">Party List</h5>
+                            <h5 className="mb-0">Leak List</h5>
                         </div>
 
                         <div className="col-md-6 mt-3 mt-md-0">
                             <input
                                 type="text"
                                 className="form-control"
-                                placeholder="Search party..."
+                                placeholder="Search leak..."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                             />
@@ -584,7 +529,7 @@ const Party = () => {
 
                 <div className="card-body">
                     <DataTable
-                        value={parties}
+                        value={entries}
                         loading={listLoading}
                         lazy
                         paginator
@@ -594,11 +539,11 @@ const Party = () => {
                         rowsPerPageOptions={[5, 10, 20, 50]}
                         onPage={handlePageChange}
                         responsiveLayout="scroll"
-                        tableStyle={{ minWidth: "30rem" }}
+                        tableStyle={{ minWidth: "52rem" }}
                         emptyMessage={
                             debouncedSearch
-                                ? "No parties found for this search"
-                                : "No parties found"
+                                ? "No leak entries found for this search"
+                                : "No leak entries found"
                         }
                         paginatorTemplate={
                             "FirstPageLink " +
@@ -609,7 +554,7 @@ const Party = () => {
                             "RowsPerPageDropdown"
                         }
                         currentPageReportTemplate={
-                            "Showing {first} to {last} of {totalRecords} parties"
+                            "Showing {first} to {last} of {totalRecords} entries"
                         }
                         showCurrentPageReport
                     >
@@ -618,15 +563,12 @@ const Party = () => {
                             body={serialNumberTemplate}
                             style={{ width: "80px" }}
                         />
-                        <Column field="name" header="Name" />
-                        <Column field="phone_no" header="Phone No" /> 
-                        <Column field="openbal" header="Opening Balance" />
                         <Column
-                            header="Head Master"
-                            body={headBodyTemplate}
+                            header="Date"
+                            body={dateBodyTemplate}
                         />
-                        
-                        <Column field="salary" header="Salary" />
+                        <Column field="stock_item_name" header="Stock Item" />
+                        <Column field="qty" header="Qty" />
                         <Column
                             header="Action"
                             body={actionBodyTemplate}
@@ -639,4 +581,4 @@ const Party = () => {
     );
 };
 
-export default Party;
+export default Leak;

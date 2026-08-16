@@ -8,7 +8,7 @@ const getStats = async () => {
     ] = await Promise.all([
         db.query("SELECT COUNT(*) AS total FROM products WHERE deleted_at IS NULL"),
         db.query("SELECT COUNT(*) AS total FROM customers WHERE deleted_at IS NULL"),
-        db.query("SELECT COUNT(*) AS total FROM staff_categories WHERE deleted_at IS NULL"),
+        db.query("SELECT COUNT(*) AS total FROM master WHERE deleted_at IS NULL"),
     ]);
 
     return {
