@@ -161,6 +161,34 @@ const findById = async (id, userId) => {
     return rows[0] || null;
 };
 
+const findByName = async (name, userId) => {
+    const sql = `
+        SELECT
+            p.id,
+            p.name,
+            p.cid,
+            p.address,
+            p.phone_no,
+            p.openbal,
+            p.sid,
+            p.sid1,
+            p.salary,
+            p.created_at,
+            p.updated_at,
+            p.deleted_at
+        FROM party p
+        WHERE LOWER(p.name) = LOWER(?)
+        AND p.cid = ?
+        AND p.deleted_at IS NULL
+        ORDER BY p.id ASC
+        LIMIT 1
+    `;
+
+    const [rows] = await db.query(sql, [name, userId]);
+
+    return rows[0] || null;
+};
+
 const update = async (id, body, userId) => {
     const sql = `
         UPDATE party
@@ -209,6 +237,7 @@ module.exports = {
     create,
     findAll,
     findById,
+    findByName,
     update,
     remove
 };

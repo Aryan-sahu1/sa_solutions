@@ -14,6 +14,7 @@ const stockItemRoutes = require("./routes/stockItem.routes");
 const staffMemberRoutes = require("./routes/staffMember.routes");
 const vehicleMasterRoutes = require("./routes/vehicleMaster.routes");
 const customerPetrolRoutes = require("./routes/customerPetrol.routes");
+const cashReceiptPaymentRoutes = require("./routes/cashReceiptPayment.routes");
 const masterListRoutes = require("./routes/masterlist.routes");
 const leakRoutes = require("./routes/leak.routes");
 const customerRoutes =
@@ -36,6 +37,7 @@ app.use("/api/stock-item", stockItemRoutes);
 app.use("/api/staff-member", staffMemberRoutes);
 app.use("/api/vehicle-master", vehicleMasterRoutes);
 app.use("/api/customer-petrol", customerPetrolRoutes);
+app.use("/api/cash-receipt-payment", cashReceiptPaymentRoutes);
 app.use("/api/leak", leakRoutes);
 app.use("/api/customers", customerRoutes);
 app.use("/api/master-list", masterListRoutes);

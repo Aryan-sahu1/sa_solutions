@@ -45,6 +45,32 @@ const initLeakTable = async () => {
     await db.query(sql);
 };
 
+const initTranTable = async () => {
+    const sql = `
+        CREATE TABLE IF NOT EXISTS tran (
+            id INT(11) NOT NULL AUTO_INCREMENT,
+            pid INT(11) NOT NULL COMMENT 'Relation with party',
+            crid INT(11) NOT NULL COMMENT 'Relation with party',
+            date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            type VARCHAR(10) NULL DEFAULT 'O',
+            type1 VARCHAR(15) NULL DEFAULT NULL,
+            remarks VARCHAR(255) NOT NULL,
+            amt VARCHAR(10) NOT NULL,
+            cid INT(11) NOT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            deleted_at TIMESTAMP NULL DEFAULT NULL,
+            PRIMARY KEY (id),
+            INDEX idx_tran_cid_deleted (cid, deleted_at),
+            INDEX idx_tran_pid (pid),
+            INDEX idx_tran_crid (crid),
+            INDEX idx_tran_type (type, type1)
+        )
+    `;
+
+    await db.query(sql);
+};
+
 const syncMasterForeignKey = async () => {
     const [constraints] = await db.query(
         `
@@ -103,6 +129,7 @@ const syncMasterForeignKey = async () => {
 const initTables = async () => {
     await initCustomerPetrolTable();
     await initLeakTable();
+    await initTranTable();
     await syncMasterForeignKey();
 };
 

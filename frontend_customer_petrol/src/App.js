@@ -24,6 +24,7 @@ import { AuthProvider } from "./context/AuthContext";
 import AddItem from "./component/AddItem";
 import Voucher from "./component/Voucher";
 import Leak from "./component/Leak";
+import CashReceiptPayment from "./component/CashReceiptPayment";
 
  
 
@@ -108,6 +109,11 @@ const App = () => {
                          <Route
                             path="/voucher-entry"
                             element={<Voucher />}
+                        />
+
+                          <Route
+                            path="/cash-receipt"
+                            element={<CashReceiptPayment />}
                         />
 
                           <Route
