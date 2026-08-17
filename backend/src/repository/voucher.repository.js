@@ -20,7 +20,7 @@ const create = async (body, userId) => {
         body.crid,
         body.date,
         body.type,
-        body.type1,
+        null,
         body.remarks,
         body.amt,
         userId
@@ -31,7 +31,7 @@ const create = async (body, userId) => {
 
 const findAll = async ({ userId, page = 1, limit = 10, search = "", date = "" } = {}) => {
     const offset = (page - 1) * limit;
-    let where = `WHERE tr.deleted_at IS NULL AND tr.cid = ? AND tr.type = 'C'`;
+    let where = `WHERE tr.deleted_at IS NULL AND tr.cid = ? AND tr.type = 'O'`;
     const params = [userId];
 
     if (date && String(date).trim() !== "") {
@@ -42,15 +42,14 @@ const findAll = async ({ userId, page = 1, limit = 10, search = "", date = "" } 
     if (search && String(search).trim() !== "") {
         where += `
             AND (
-                party.name LIKE ?
-                OR cash_party.name LIKE ?
-                OR tr.type1 LIKE ?
+                debit_party.name LIKE ?
+                OR credit_party.name LIKE ?
                 OR tr.remarks LIKE ?
                 OR tr.amt LIKE ?
             )
         `;
         const searchTerm = `%${String(search).trim()}%`;
-        params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+        params.push(searchTerm, searchTerm, searchTerm, searchTerm);
     }
 
     const dataSql = `
@@ -67,27 +66,17 @@ const findAll = async ({ userId, page = 1, limit = 10, search = "", date = "" } 
             tr.created_at,
             tr.updated_at,
             tr.deleted_at,
-            CASE
-                WHEN tr.type1 = 'Receipt' THEN party.name
-                ELSE payment_party.name
-            END AS party_name,
-            cash_party.name AS cash_head_name
+            debit_party.name AS debit_party_name,
+            credit_party.name AS credit_party_name
         FROM tran tr
-        LEFT JOIN party party
-            ON party.id = tr.crid
-            AND party.cid = tr.cid
-            AND party.deleted_at IS NULL
-        LEFT JOIN party payment_party
-            ON payment_party.id = tr.pid
-            AND payment_party.cid = tr.cid
-            AND payment_party.deleted_at IS NULL
-        LEFT JOIN party cash_party
-            ON cash_party.id = CASE
-                WHEN tr.type1 = 'Receipt' THEN tr.pid
-                ELSE tr.crid
-            END
-            AND cash_party.cid = tr.cid
-            AND cash_party.deleted_at IS NULL
+        LEFT JOIN party debit_party
+            ON debit_party.id = tr.pid
+            AND debit_party.cid = tr.cid
+            AND debit_party.deleted_at IS NULL
+        LEFT JOIN party credit_party
+            ON credit_party.id = tr.crid
+            AND credit_party.cid = tr.cid
+            AND credit_party.deleted_at IS NULL
         ${where}
         ORDER BY tr.id DESC
         LIMIT ? OFFSET ?
@@ -96,21 +85,14 @@ const findAll = async ({ userId, page = 1, limit = 10, search = "", date = "" } 
     const countSql = `
         SELECT COUNT(*) AS total
         FROM tran tr
-        LEFT JOIN party party
-            ON party.id = tr.crid
-            AND party.cid = tr.cid
-            AND party.deleted_at IS NULL
-        LEFT JOIN party payment_party
-            ON payment_party.id = tr.pid
-            AND payment_party.cid = tr.cid
-            AND payment_party.deleted_at IS NULL
-        LEFT JOIN party cash_party
-            ON cash_party.id = CASE
-                WHEN tr.type1 = 'Receipt' THEN tr.pid
-                ELSE tr.crid
-            END
-            AND cash_party.cid = tr.cid
-            AND cash_party.deleted_at IS NULL
+        LEFT JOIN party debit_party
+            ON debit_party.id = tr.pid
+            AND debit_party.cid = tr.cid
+            AND debit_party.deleted_at IS NULL
+        LEFT JOIN party credit_party
+            ON credit_party.id = tr.crid
+            AND credit_party.cid = tr.cid
+            AND credit_party.deleted_at IS NULL
         ${where}
     `;
 
@@ -148,22 +130,20 @@ const findById = async (id, userId) => {
             tr.created_at,
             tr.updated_at,
             tr.deleted_at,
-            CASE
-                WHEN tr.type1 = 'Receipt' THEN party.name
-                ELSE payment_party.name
-            END AS party_name
+            debit_party.name AS debit_party_name,
+            credit_party.name AS credit_party_name
         FROM tran tr
-        LEFT JOIN party party
-            ON party.id = tr.crid
-            AND party.cid = tr.cid
-            AND party.deleted_at IS NULL
-        LEFT JOIN party payment_party
-            ON payment_party.id = tr.pid
-            AND payment_party.cid = tr.cid
-            AND payment_party.deleted_at IS NULL
+        LEFT JOIN party debit_party
+            ON debit_party.id = tr.pid
+            AND debit_party.cid = tr.cid
+            AND debit_party.deleted_at IS NULL
+        LEFT JOIN party credit_party
+            ON credit_party.id = tr.crid
+            AND credit_party.cid = tr.cid
+            AND credit_party.deleted_at IS NULL
         WHERE tr.id = ?
         AND tr.cid = ?
-        AND tr.type = 'C'
+        AND tr.type = 'O'
         AND tr.deleted_at IS NULL
     `;
 
@@ -179,12 +159,12 @@ const update = async (id, body, userId) => {
             crid = ?,
             date = ?,
             type = ?,
-            type1 = ?,
+            type1 = NULL,
             remarks = ?,
             amt = ?
         WHERE id = ?
         AND cid = ?
-        AND type = 'C'
+        AND type = 'O'
         AND deleted_at IS NULL
     `;
 
@@ -193,7 +173,6 @@ const update = async (id, body, userId) => {
         body.crid,
         body.date,
         body.type,
-        body.type1,
         body.remarks,
         body.amt,
         id,
@@ -209,7 +188,7 @@ const remove = async (id, userId) => {
         SET deleted_at = CURRENT_TIMESTAMP
         WHERE id = ?
         AND cid = ?
-        AND type = 'C'
+        AND type = 'O'
         AND deleted_at IS NULL
     `;
 

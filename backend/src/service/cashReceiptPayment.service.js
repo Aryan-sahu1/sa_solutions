@@ -92,7 +92,8 @@ const findAll = async (options = {}) => {
         userId: options.userId,
         page,
         limit,
-        search: options.search || ""
+        search: options.search || "",
+        date: options.date || ""
     });
 };
 

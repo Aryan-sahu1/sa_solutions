@@ -22,16 +22,16 @@ const toInputValue = (value) => {
     return String(value);
 };
 
-const getCurrentDateTimeValue = () => {
+const getCurrentDateValue = () => {
     const now = new Date();
     const timezoneOffset = now.getTimezoneOffset() * 60000;
 
     return new Date(now.getTime() - timezoneOffset)
         .toISOString()
-        .slice(0, 16);
+        .slice(0, 10);
 };
 
-const toDateTimeInputValue = (value) => {
+const toDateInputValue = (value) => {
     if (!value) {
         return "";
     }
@@ -46,7 +46,7 @@ const toDateTimeInputValue = (value) => {
 
     return new Date(date.getTime() - timezoneOffset)
         .toISOString()
-        .slice(0, 16);
+        .slice(0, 10);
 };
 
 const CashReceiptPayment = () => {
@@ -59,6 +59,7 @@ const CashReceiptPayment = () => {
 
     const [search, setSearch] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
+    const [dateFilter, setDateFilter] = useState("");
 
     const [loading, setLoading] = useState(false);
     const [listLoading, setListLoading] = useState(false);
@@ -71,7 +72,7 @@ const CashReceiptPayment = () => {
 
     const getDefaultFormData = useCallback(() => ({
         ...initialFormData,
-        date: getCurrentDateTimeValue(),
+        date: getCurrentDateValue(),
         party_id: toInputValue(parties[0]?.id),
     }), [parties]);
 
@@ -85,7 +86,7 @@ const CashReceiptPayment = () => {
     }, [search]);
 
     const getEntries = useCallback(
-        async (currentPage, currentLimit, currentSearch) => {
+        async (currentPage, currentLimit, currentSearch, currentDateFilter) => {
             try {
                 setListLoading(true);
                 setError("");
@@ -97,6 +98,10 @@ const CashReceiptPayment = () => {
 
                 if (currentSearch) {
                     params.search = currentSearch;
+                }
+
+                if (currentDateFilter) {
+                    params.date = currentDateFilter;
                 }
 
                 const response = await axios.get(
@@ -160,7 +165,7 @@ const CashReceiptPayment = () => {
             setParties(nextParties);
             setFormData((current) => ({
                 ...current,
-                date: current.date || getCurrentDateTimeValue(),
+                date: current.date || getCurrentDateValue(),
                 party_id: current.party_id || toInputValue(nextParties[0]?.id),
             }));
         } catch (err) {
@@ -177,8 +182,8 @@ const CashReceiptPayment = () => {
     }, [getParties]);
 
     useEffect(() => {
-        getEntries(page, limit, debouncedSearch);
-    }, [page, limit, debouncedSearch, getEntries]);
+        getEntries(page, limit, debouncedSearch, dateFilter);
+    }, [page, limit, debouncedSearch, dateFilter, getEntries]);
 
     const resetForm = () => {
         setFormData(getDefaultFormData());
@@ -290,7 +295,7 @@ const CashReceiptPayment = () => {
                 resetForm();
                 setShowForm(false);
                 setPage(1);
-                await getEntries(1, limit, debouncedSearch);
+                await getEntries(1, limit, debouncedSearch, dateFilter);
                 return;
             }
 
@@ -317,7 +322,7 @@ const CashReceiptPayment = () => {
 
         setEditId(entry.id);
         setFormData({
-            date: toDateTimeInputValue(entry.date),
+            date: toDateInputValue(entry.date),
             party_id: toInputValue(partyId),
             amt: toInputValue(entry.amt),
             remarks: toInputValue(entry.remarks),
@@ -361,7 +366,7 @@ const CashReceiptPayment = () => {
                     setShowForm(false);
                 }
 
-                await getEntries(page, limit, debouncedSearch);
+                await getEntries(page, limit, debouncedSearch, dateFilter);
                 return;
             }
 
@@ -564,13 +569,28 @@ const CashReceiptPayment = () => {
                         </div>
 
                         <div className="col-md-6 mt-3 mt-md-0">
-                            <input
-                                type="text"
-                                className="form-control"
-                                placeholder="Search entry..."
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                            />
+                            <div className="row g-2">
+                                <div className="col-md-7">
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        placeholder="Search entry..."
+                                        value={search}
+                                        onChange={(e) => setSearch(e.target.value)}
+                                    />
+                                </div>
+                                <div className="col-md-5">
+                                    <input
+                                        type="date"
+                                        className="form-control"
+                                        value={dateFilter}
+                                        onChange={(e) => {
+                                            setDateFilter(e.target.value);
+                                            setPage(1);
+                                        }}
+                                    />
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

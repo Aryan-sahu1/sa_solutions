@@ -1,12 +1,12 @@
-const cashReceiptPaymentService = require("../service/cashReceiptPayment.service");
+const voucherService = require("../service/voucher.service");
 
 const create = async (req, res, next) => {
     try {
-        const result = await cashReceiptPaymentService.create(req.body, req.user.id);
+        const result = await voucherService.create(req.body, req.user.id);
 
         return res.status(201).json({
             status: true,
-            message: "Cash receipt/payment entry created successfully",
+            message: "Voucher entry created successfully",
             data: result
         });
     } catch (error) {
@@ -16,7 +16,7 @@ const create = async (req, res, next) => {
 
 const findAll = async (req, res, next) => {
     try {
-        const result = await cashReceiptPaymentService.findAll({
+        const result = await voucherService.findAll({
             userId: req.user.id,
             page: Number(req.query.page) || 1,
             limit: Number(req.query.limit) || 10,
@@ -26,7 +26,7 @@ const findAll = async (req, res, next) => {
 
         return res.status(200).json({
             status: true,
-            message: "Cash receipt/payment entries fetched successfully",
+            message: "Voucher entries fetched successfully",
             data: result.data,
             pagination: result.pagination
         });
@@ -37,14 +37,11 @@ const findAll = async (req, res, next) => {
 
 const findById = async (req, res, next) => {
     try {
-        const data = await cashReceiptPaymentService.findById(
-            req.params.id,
-            req.user.id
-        );
+        const data = await voucherService.findById(req.params.id, req.user.id);
 
         return res.status(200).json({
             status: true,
-            message: "Cash receipt/payment entry fetched successfully",
+            message: "Voucher entry fetched successfully",
             data
         });
     } catch (error) {
@@ -54,7 +51,7 @@ const findById = async (req, res, next) => {
 
 const update = async (req, res, next) => {
     try {
-        const data = await cashReceiptPaymentService.update(
+        const data = await voucherService.update(
             req.params.id,
             req.body,
             req.user.id
@@ -62,7 +59,7 @@ const update = async (req, res, next) => {
 
         return res.status(200).json({
             status: true,
-            message: "Cash receipt/payment entry updated successfully",
+            message: "Voucher entry updated successfully",
             data
         });
     } catch (error) {
@@ -72,11 +69,11 @@ const update = async (req, res, next) => {
 
 const remove = async (req, res, next) => {
     try {
-        await cashReceiptPaymentService.remove(req.params.id, req.user.id);
+        await voucherService.remove(req.params.id, req.user.id);
 
         return res.status(200).json({
             status: true,
-            message: "Cash receipt/payment entry deleted successfully"
+            message: "Voucher entry deleted successfully"
         });
     } catch (error) {
         next(error);
