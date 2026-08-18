@@ -607,7 +607,7 @@ const CashReceiptPayment = () => {
                         rowsPerPageOptions={[5, 10, 20, 50]}
                         onPage={handlePageChange}
                         responsiveLayout="scroll"
-                        tableStyle={{ minWidth: "56rem" }}
+                        tableStyle={{ minWidth: "40rem" }}
                         emptyMessage={
                             debouncedSearch
                                 ? "No entries found for this search"

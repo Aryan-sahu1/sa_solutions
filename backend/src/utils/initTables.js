@@ -71,6 +71,60 @@ const initTranTable = async () => {
     await db.query(sql);
 };
 
+const initBillTable = async () => {
+    const sql = `
+        CREATE TABLE IF NOT EXISTS bill (
+            id INT(11) NOT NULL AUTO_INCREMENT,
+            sdate DATETIME NULL DEFAULT NULL,
+            edate DATETIME NULL DEFAULT NULL,
+            date DATETIME NULL DEFAULT NULL,
+            billno VARCHAR(50) NULL DEFAULT NULL,
+            vehicleno INT(11) NULL DEFAULT NULL,
+            party INT(11) NULL DEFAULT NULL,
+            remarks TEXT NULL DEFAULT NULL,
+            amt DECIMAL(15,2) NULL DEFAULT 0.00,
+            type VARCHAR(100) NULL DEFAULT NULL,
+            tcs DECIMAL(15,2) NULL DEFAULT 0.00,
+            cid INT(11) NOT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            deleted_at TIMESTAMP NULL DEFAULT NULL,
+            PRIMARY KEY (id),
+            INDEX idx_bill_cid_deleted (cid, deleted_at),
+            INDEX idx_bill_party (party),
+            INDEX idx_bill_vehicle (vehicleno)
+        )
+    `;
+
+    await db.query(sql);
+};
+
+const addColumnIfMissing = async (tableName, columnName, definition) => {
+    const [columns] = await db.query(
+        `
+            SELECT COLUMN_NAME
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+                AND TABLE_NAME = ?
+                AND COLUMN_NAME = ?
+        `,
+        [tableName, columnName]
+    );
+
+    if (columns.length > 0) {
+        return;
+    }
+
+    await db.query(`ALTER TABLE \`${tableName}\` ADD COLUMN ${definition}`);
+};
+
+const syncBillColumns = async () => {
+    await addColumnIfMissing("bill", "cid", "`cid` INT(11) NULL DEFAULT NULL");
+    await addColumnIfMissing("bill", "created_at", "`created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP");
+    await addColumnIfMissing("bill", "updated_at", "`updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+    await addColumnIfMissing("bill", "deleted_at", "`deleted_at` TIMESTAMP NULL DEFAULT NULL");
+};
+
 const syncMasterForeignKey = async () => {
     const [constraints] = await db.query(
         `
@@ -130,6 +184,8 @@ const initTables = async () => {
     await initCustomerPetrolTable();
     await initLeakTable();
     await initTranTable();
+    await initBillTable();
+    await syncBillColumns();
     await syncMasterForeignKey();
 };
 

@@ -104,8 +104,6 @@ const findById = async (id, userId) => {
         SELECT
             vm.id,
             vm.name,
-            vm.vehicle_no,
-            vm.vehicle_no AS vehicleNo,
             vm.balance,
             vm.sid,
             vm.cid,
@@ -132,7 +130,6 @@ const update = async (id, body, userId) => {
     const sql = `
         UPDATE vehicle_master
         SET name = ?,
-            vehicle_no = ?,
             balance = ?,
             sid = ?
         WHERE id = ?
@@ -142,7 +139,6 @@ const update = async (id, body, userId) => {
 
     const [result] = await db.query(sql, [
         body.name,
-        getVehicleNo(body),
         body.balance,
         body.sid,
         id,

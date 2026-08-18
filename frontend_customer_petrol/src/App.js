@@ -25,6 +25,7 @@ import AddItem from "./component/AddItem";
 import Voucher from "./component/Voucher";
 import Leak from "./component/Leak";
 import CashReceiptPayment from "./component/CashReceiptPayment";
+import BillGeneration from "./component/BillGeneration";
 
  
 
@@ -114,6 +115,11 @@ const App = () => {
                           <Route
                             path="/cash-receipt"
                             element={<CashReceiptPayment />}
+                        />
+
+                          <Route
+                            path="/bill-generation"
+                            element={<BillGeneration />}
                         />
 
                           <Route
