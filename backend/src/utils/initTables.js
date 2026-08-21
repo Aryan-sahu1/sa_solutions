@@ -71,6 +71,28 @@ const initTranTable = async () => {
     await db.query(sql);
 };
 
+const initTrandeTable = async () => {
+    const sql = `
+        CREATE TABLE IF NOT EXISTS trande (
+            id INT(11) NOT NULL AUTO_INCREMENT,
+            iid INT(11) NOT NULL COMMENT 'relation with stock_item_table',
+            sid INT(11) NOT NULL COMMENT 'Relation with tran',
+            product_id INT(11) NULL DEFAULT NULL,
+            qty INT(11) NOT NULL,
+            rate VARCHAR(20) NULL DEFAULT NULL,
+            amt VARCHAR(20) NOT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            deleted_at TIMESTAMP NULL DEFAULT NULL,
+            PRIMARY KEY (id),
+            INDEX idx_trande_sid_deleted (sid, deleted_at),
+            INDEX idx_trande_iid (iid)
+        )
+    `;
+
+    await db.query(sql);
+};
+
 const initBillTable = async () => {
     const sql = `
         CREATE TABLE IF NOT EXISTS bill (
@@ -123,6 +145,13 @@ const syncBillColumns = async () => {
     await addColumnIfMissing("bill", "created_at", "`created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP");
     await addColumnIfMissing("bill", "updated_at", "`updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
     await addColumnIfMissing("bill", "deleted_at", "`deleted_at` TIMESTAMP NULL DEFAULT NULL");
+};
+
+const syncTranSalesColumns = async () => {
+    await addColumnIfMissing("tran", "vehicle_no", "`vehicle_no` INT(11) NULL DEFAULT NULL");
+    await addColumnIfMissing("tran", "slip_no", "`slip_no` VARCHAR(50) NULL DEFAULT NULL");
+    await addColumnIfMissing("trande", "product_id", "`product_id` INT(11) NULL DEFAULT NULL");
+    await addColumnIfMissing("trande", "rate", "`rate` VARCHAR(20) NULL DEFAULT NULL");
 };
 
 const syncMasterForeignKey = async () => {
@@ -184,8 +213,10 @@ const initTables = async () => {
     await initCustomerPetrolTable();
     await initLeakTable();
     await initTranTable();
+    await initTrandeTable();
     await initBillTable();
     await syncBillColumns();
+    await syncTranSalesColumns();
     await syncMasterForeignKey();
 };
 

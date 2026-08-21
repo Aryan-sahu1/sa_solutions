@@ -40,6 +40,7 @@ const implementedProductRoutes = new Set([
     "/staff-member",
     "/vehicle-master",
     "/add-data",
+    "/sale",
     "/voucher-entry",
     "/cash-receipt",
     "/cash-receipt-payment",
@@ -187,4 +188,3 @@ const App = () => {
 };
 
 export default App;
-
