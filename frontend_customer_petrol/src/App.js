@@ -1,4 +1,4 @@
- 
+
 import React from "react";
 import {
     BrowserRouter,
@@ -26,10 +26,33 @@ import Voucher from "./component/Voucher";
 import Leak from "./component/Leak";
 import CashReceiptPayment from "./component/CashReceiptPayment";
 import BillGeneration from "./component/BillGeneration";
+import ProductPagePlaceholder from "./component/ProductPagePlaceholder";
+import { mergedProductRoutes } from "./config/productConfig";
+import Sales from "./component/Sales";
 
- 
+const implementedProductRoutes = new Set([
+    "/dashboard",
+    "/change-password",
+    "/head-master",
+    "/party",
+    "/product-category",
+    "/stock-item",
+    "/staff-member",
+    "/vehicle-master",
+    "/add-data",
+    "/voucher-entry",
+    "/cash-receipt",
+    "/cash-receipt-payment",
+    "/bill-generation",
+    "/only-bill",
+    "/leak",
+]);
 
- 
+const placeholderRoutes = mergedProductRoutes.filter(
+    (path) => !implementedProductRoutes.has(path)
+);
+
+
 const App = () => {
     return (
         <BrowserRouter>
@@ -103,29 +126,52 @@ const App = () => {
                             path="/vehicle-master"
                             element={<VehicleMaster />}
                         />
-                         <Route
+                        <Route
                             path="/add-data"
                             element={<AddItem />}
                         />
-                         <Route
+                        <Route
                             path="/voucher-entry"
                             element={<Voucher />}
                         />
 
-                          <Route
+                        <Route
                             path="/cash-receipt"
                             element={<CashReceiptPayment />}
                         />
 
                           <Route
+                            path="/sale"
+                            element={<Sales />}
+                        />
+
+                        <Route
+                            path="/cash-receipt-payment"
+                            element={<CashReceiptPayment />}
+                        />
+
+                        <Route
                             path="/bill-generation"
                             element={<BillGeneration />}
                         />
 
-                          <Route
+                        <Route
+                            path="/only-bill"
+                            element={<BillGeneration />}
+                        />
+
+                        <Route
                             path="/leak"
                             element={<Leak />}
                         />
+
+                        {placeholderRoutes.map((path) => (
+                            <Route
+                                key={path}
+                                path={path}
+                                element={<ProductPagePlaceholder />}
+                            />
+                        ))}
                     </Route>
 
                     {/* Default */}
@@ -141,4 +187,4 @@ const App = () => {
 };
 
 export default App;
- 
+

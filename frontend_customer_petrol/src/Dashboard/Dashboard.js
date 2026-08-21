@@ -11,6 +11,7 @@ import {
     FaRupeeSign,
     FaUser,
 } from "react-icons/fa";
+import { getProductConfig } from "../config/productConfig";
 import { useAuth } from "../context/AuthContext";
 
 const formatDate = (value) => {
@@ -47,6 +48,7 @@ const Dashboard = () => {
         customer?.product?.name ||
         customer?.product_name ||
         "Product not assigned";
+    const productConfig = getProductConfig(customer);
 
     const subscription = useMemo(() => {
         const today = new Date();
@@ -157,16 +159,16 @@ const Dashboard = () => {
                 </marquee>
             )}
 
-            <section className="dashboard-hero mb-4">
+            <section className={`dashboard-hero ${productConfig.heroClass} mb-4`}>
                 <div>
                     <span className="badge rounded-pill text-bg-light mb-3">
                         <FaCheckCircle /> Verified Customer
                     </span>
                     <h2 className="fw-bold mb-2">
-                        Welcome, {customer?.name || customer?.username || "Customer"}
+                        {productConfig.title}
                     </h2>
                     <p className="mb-0">
-                        Your active product is <strong>{productName}</strong>.
+                        Welcome, {customer?.name || customer?.username || "Customer"}. Your active product is <strong>{productName}</strong>.
                     </p>
                 </div>
 
@@ -291,9 +293,20 @@ const Dashboard = () => {
                     gap: 20px;
                     padding: 28px;
                     color: #ffffff;
-                    background: linear-gradient(135deg, #0d6efd, #20c997);
                     border-radius: 8px;
                     box-shadow: 0 14px 34px rgba(13, 110, 253, 0.18);
+                }
+
+                .dashboard-hero-petrol {
+                    background: linear-gradient(135deg, #0d6efd, #20c997);
+                }
+
+                .dashboard-hero-school {
+                    background: linear-gradient(135deg, #198754, #0dcaf0);
+                }
+
+                .dashboard-hero-bricks {
+                    background: linear-gradient(135deg, #b02a37, #fd7e14);
                 }
 
                 .plan-expired-marquee {
