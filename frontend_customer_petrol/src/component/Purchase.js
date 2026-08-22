@@ -57,7 +57,7 @@ const calculateAmount = (qty, rate) => {
     return String(qtyValue * rateValue);
 };
 
-const Sales = () => {
+const Purchase = () => {
     const { authHeaders } = useAuth();
     const [entries, setEntries] = useState([]);
     const [parties, setParties] = useState([]);
@@ -193,7 +193,7 @@ const Sales = () => {
                 if (currentSearch) params.search = currentSearch;
                 if (currentDateFilter) params.date = currentDateFilter;
 
-                const response = await axios.get(`${API_BASE_URL}/sales`, {
+                const response = await axios.get(`${API_BASE_URL}/purchase`, {
                     params,
                     headers: {
                         ...authHeaders,
@@ -210,12 +210,12 @@ const Sales = () => {
 
                 setEntries([]);
                 setTotalRecords(0);
-                setError(response.data.message || "No sale entries found");
+                setError(response.data.message || "No purchase entries found");
             } catch (err) {
-                console.error("Sales list error:", err);
+                console.error("Purchase list error:", err);
                 setEntries([]);
                 setTotalRecords(0);
-                setError(err.response?.data?.message || "Failed to fetch sale entries");
+                setError(err.response?.data?.message || "Failed to fetch purchase entries");
             } finally {
                 setListLoading(false);
             }
@@ -250,7 +250,7 @@ const Sales = () => {
                     iid: nextSelectedItem,
                 }));
             } catch (err) {
-                console.error("Sales item option error:", err);
+                console.error("Purchase item option error:", err);
                 setItems([]);
                 setItemData((current) => ({ ...current, iid: "" }));
                 setError(err.response?.data?.message || "Failed to fetch stock items");
@@ -286,7 +286,7 @@ const Sales = () => {
                     vehicle_no: nextSelectedVehicle,
                 }));
             } catch (err) {
-                console.error("Sales vehicle option error:", err);
+                console.error("Purchase vehicle option error:", err);
                 setVehicles([]);
                 setFormData((current) => ({ ...current, vehicle_no: "" }));
                 setError(err.response?.data?.message || "Failed to fetch party vehicles");
@@ -338,8 +338,8 @@ const Sales = () => {
             if (firstPartyId) await getVehicles(firstPartyId);
             if (firstProductId) await getItems(firstProductId);
         } catch (err) {
-            console.error("Sales option error:", err);
-            setError(err.response?.data?.message || "Failed to fetch sale options");
+            console.error("Purchase option error:", err);
+            setError(err.response?.data?.message || "Failed to fetch purchase options");
         }
     }, [authHeaders, getItems, getVehicles]);
 
@@ -516,13 +516,13 @@ const Sales = () => {
             };
 
             const response = editId
-                ? await axios.put(`${API_BASE_URL}/sales/${editId}`, payload, config)
-                : await axios.post(`${API_BASE_URL}/sales`, payload, config);
+                ? await axios.put(`${API_BASE_URL}/purchase/${editId}`, payload, config)
+                : await axios.post(`${API_BASE_URL}/purchase`, payload, config);
 
             if (response.data.status) {
                 setMessage(
                     response.data.message ||
-                    (editId ? "Sale entry updated successfully" : "Sale entry saved successfully")
+                    (editId ? "Purchase entry updated successfully" : "Purchase entry saved successfully")
                 );
                 resetForm();
                 setShowForm(false);
@@ -531,10 +531,10 @@ const Sales = () => {
                 return undefined;
             }
 
-            return setError(response.data.message || "Failed to save sale entry");
+            return setError(response.data.message || "Failed to save purchase entry");
         } catch (err) {
-            console.error("Save sales error:", err);
-            return setError(err.response?.data?.message || "Failed to save sale entry");
+            console.error("Save purchase error:", err);
+            return setError(err.response?.data?.message || "Failed to save purchase entry");
         } finally {
             setLoading(false);
         }
@@ -614,28 +614,28 @@ const Sales = () => {
     };
 
     const handleDelete = async (id) => {
-        const confirmDelete = window.confirm("Are you sure you want to delete this sale entry?");
+        const confirmDelete = window.confirm("Are you sure you want to delete this purchase entry?");
         if (!confirmDelete) return;
 
         try {
             setMessage("");
             setError("");
 
-            const response = await axios.delete(`${API_BASE_URL}/sales/${id}`, {
+            const response = await axios.delete(`${API_BASE_URL}/purchase/${id}`, {
                 headers: authHeaders,
             });
 
             if (response.data.status) {
-                setMessage(response.data.message || "Sale entry deleted successfully");
+                setMessage(response.data.message || "Purchase entry deleted successfully");
                 if (editId === id) handleCancel();
                 await getEntries(page, limit, debouncedSearch, dateFilter);
                 return;
             }
 
-            setError(response.data.message || "Failed to delete sale entry");
+            setError(response.data.message || "Failed to delete purchase entry");
         } catch (err) {
-            console.error("Delete sales error:", err);
-            setError(err.response?.data?.message || "Failed to delete sale entry");
+            console.error("Delete purchase error:", err);
+            setError(err.response?.data?.message || "Failed to delete purchase entry");
         }
     };
 
@@ -680,9 +680,9 @@ const Sales = () => {
         <div className="container-fluid p-4">
             <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
                 <div>
-                    <h2 className="fw-bold mb-1">Sales</h2>
+                    <h2 className="fw-bold mb-1">Purchase</h2>
                     <p className="text-muted mb-0">
-                        One sale entry can contain multiple item details
+                        One purchase entry can contain multiple item details
                     </p>
                 </div>
 
@@ -691,7 +691,7 @@ const Sales = () => {
                     className="btn btn-primary"
                     onClick={() => (showForm ? handleCancel() : handleAdd())}
                 >
-                    {showForm ? "Close" : "+ Add Sale"}
+                    {showForm ? "Close" : "+ Add Purchase"}
                 </button>
             </div>
 
@@ -701,7 +701,7 @@ const Sales = () => {
             {showForm && (
                 <div className="card shadow-sm border-0 mb-4">
                     <div className="card-header bg-white">
-                        <h5 className="mb-0">{editId ? "Edit Sale" : "New Sale"}</h5>
+                        <h5 className="mb-0">{editId ? "Edit Purchase" : "New Purchase"}</h5>
                     </div>
 
                     <div className="card-body">
@@ -927,7 +927,7 @@ const Sales = () => {
                 <div className="card-header bg-white p-3">
                     <div className="row align-items-center">
                         <div className="col-md-6">
-                            <h5 className="mb-0">Sales List</h5>
+                            <h5 className="mb-0">Purchase List</h5>
                         </div>
 
                         <div className="col-md-6 mt-3 mt-md-0">
@@ -936,7 +936,7 @@ const Sales = () => {
                                     <input
                                         type="text"
                                         className="form-control"
-                                        placeholder="Search sales..."
+                                        placeholder="Search purchase..."
                                         value={search}
                                         onChange={(e) => setSearch(e.target.value)}
                                     />
@@ -971,9 +971,9 @@ const Sales = () => {
                         onRowClick={(event) => setSelectedEntry(event.data)}
                         responsiveLayout="scroll"
                         tableStyle={{ minWidth: "58rem", cursor: "pointer" }}
-                        emptyMessage={debouncedSearch ? "No sales found for this search" : "No sales found"}
+                        emptyMessage={debouncedSearch ? "No purchase found for this search" : "No purchase found"}
                         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown"
-                        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} sales"
+                        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} purchase"
                         showCurrentPageReport
                     >
                         <Column header="Sn" body={serialNumberTemplate} style={{ width: "80px" }} />
@@ -993,7 +993,7 @@ const Sales = () => {
                     <div className="sales-modal" onKeyDown={handleAddMoreKeyDown}>
                         <h5 className="mb-2">Add more item?</h5>
                         <p className="text-muted mb-4">
-                            Do you want to add another product/item in this same sale?
+                            Do you want to add another product/item in this same purchase?
                         </p>
                         <div className="d-flex justify-content-end gap-2">
                             <button
@@ -1003,7 +1003,7 @@ const Sales = () => {
                                 onFocus={() => setAddMoreAction("no")}
                                 onClick={handleAddMoreNo}
                             >
-                                No, Save Sale
+                                No, Save Purchase
                             </button>
                             <button
                                 ref={addMoreYesRef}
@@ -1023,7 +1023,7 @@ const Sales = () => {
                 <div className="sales-modal-backdrop">
                     <div className="sales-modal sales-detail-modal">
                         <div className="d-flex justify-content-between align-items-center mb-3">
-                            <h5 className="mb-0">Sale Detail</h5>
+                            <h5 className="mb-0">Purchase Detail</h5>
                             <button
                                 type="button"
                                 className="btn-close"
@@ -1097,4 +1097,4 @@ const Sales = () => {
     );
 };
 
-export default Sales;
+export default Purchase;

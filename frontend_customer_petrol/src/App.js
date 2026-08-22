@@ -29,6 +29,7 @@ import BillGeneration from "./component/BillGeneration";
 import ProductPagePlaceholder from "./component/ProductPagePlaceholder";
 import { mergedProductRoutes } from "./config/productConfig";
 import Sales from "./component/Sales";
+import Purchase from "./component/Purchase";
 
 const implementedProductRoutes = new Set([
     "/dashboard",
@@ -41,6 +42,7 @@ const implementedProductRoutes = new Set([
     "/vehicle-master",
     "/add-data",
     "/sale",
+    "/purchase",
     "/voucher-entry",
     "/cash-receipt",
     "/cash-receipt-payment",
@@ -144,6 +146,11 @@ const App = () => {
                           <Route
                             path="/sale"
                             element={<Sales />}
+                        />
+
+                          <Route
+                            path="/purchase"
+                            element={<Purchase />}
                         />
 
                         <Route

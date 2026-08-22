@@ -18,6 +18,7 @@ const cashReceiptPaymentRoutes = require("./routes/cashReceiptPayment.routes");
 const voucherRoutes = require("./routes/voucher.routes");
 const billRoutes = require("./routes/bill.routes");
 const salesRoutes = require("./routes/sales.routes");
+const purchaseRoutes = require("./routes/purchase.routes");
 const masterListRoutes = require("./routes/masterlist.routes");
 const leakRoutes = require("./routes/leak.routes");
 const customerRoutes =
@@ -44,6 +45,7 @@ app.use("/api/cash-receipt-payment", cashReceiptPaymentRoutes);
 app.use("/api/voucher", voucherRoutes);
 app.use("/api/bill", billRoutes);
 app.use("/api/sales", salesRoutes);
+app.use("/api/purchase", purchaseRoutes);
 app.use("/api/leak", leakRoutes);
 app.use("/api/customers", customerRoutes);
 app.use("/api/master-list", masterListRoutes);
