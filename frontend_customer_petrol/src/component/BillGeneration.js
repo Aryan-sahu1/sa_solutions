@@ -83,6 +83,7 @@ const BillGeneration = () => {
     const [listLoading, setListLoading] = useState(false);
     const [message, setMessage] = useState("");
     const [error, setError] = useState("");
+    const [amountLoading, setAmountLoading] = useState(false);
 
     const [page, setPage] = useState(1);
     const [limit, setLimit] = useState(5);
@@ -154,56 +155,93 @@ const BillGeneration = () => {
         [authHeaders]
     );
 
+    const getVehicles = useCallback(async (partyId, selectedVehicleId = "") => {
+        if (!authHeaders.Authorization || !partyId) {
+            setVehicles([]);
+            setFormData((current) => ({
+                ...current,
+                vehicleno: "",
+            }));
+            return;
+        }
+
+        try {
+            const response = await axios.get(`${API_BASE_URL}/vehicle-master`, {
+                params: {
+                    page: 1,
+                    limit: 1000,
+                    sid: partyId,
+                },
+                headers: authHeaders,
+            });
+
+            const nextVehicles = response.data.status ? response.data.data || [] : [];
+            const nextSelectedVehicle = nextVehicles.some(
+                (vehicle) => String(vehicle.id) === String(selectedVehicleId)
+            )
+                ? selectedVehicleId
+                : toInputValue(nextVehicles[0]?.id);
+
+            setVehicles(nextVehicles);
+            setFormData((current) => ({
+                ...current,
+                vehicleno: current.vehicleno === "all"
+                    ? "all"
+                    : nextSelectedVehicle,
+            }));
+        } catch (err) {
+            console.error("Bill vehicle option error:", err);
+            setVehicles([]);
+            setFormData((current) => ({
+                ...current,
+                vehicleno: "",
+            }));
+            setError(
+                err.response?.data?.message ||
+                "Failed to fetch vehicles"
+            );
+        }
+    }, [authHeaders]);
+
     const getOptions = useCallback(async () => {
         if (!authHeaders.Authorization) {
             return;
         }
 
         try {
-            const [partyResult, vehicleResult] = await Promise.allSettled([
-                axios.get(`${API_BASE_URL}/party`, {
-                    params: {
-                        page: 1,
-                        limit: 1000,
-                    },
-                    headers: authHeaders,
-                }),
-                axios.get(`${API_BASE_URL}/vehicle-master`, {
-                    params: {
-                        page: 1,
-                        limit: 1000,
-                    },
-                    headers: authHeaders,
-                }),
-            ]);
+            const partyResult = await axios.get(`${API_BASE_URL}/party`, {
+                params: {
+                    page: 1,
+                    limit: 1000,
+                },
+                headers: authHeaders,
+            });
 
-            const nextParties =
-                partyResult.status === "fulfilled" && partyResult.value.data.status
-                    ? partyResult.value.data.data || []
-                    : [];
-            const nextVehicles =
-                vehicleResult.status === "fulfilled" && vehicleResult.value.data.status
-                    ? vehicleResult.value.data.data || []
-                    : [];
+            const nextParties = partyResult.data.status
+                ? partyResult.data.data || []
+                : [];
+            const firstPartyId = toInputValue(nextParties[0]?.id);
 
             setParties(nextParties);
-            setVehicles(nextVehicles);
             setFormData((current) => ({
                 ...current,
                 sdate: current.sdate || getCurrentDateValue(),
                 edate: current.edate || getCurrentDateValue(),
                 date: current.date || getCurrentDateValue(),
-                party: current.party || toInputValue(nextParties[0]?.id),
-                vehicleno: current.vehicleno || toInputValue(nextVehicles[0]?.id),
+                party: current.party || firstPartyId,
             }));
+
+            if (firstPartyId) {
+                await getVehicles(firstPartyId);
+            }
         } catch (err) {
             console.error("Bill option error:", err);
             setError(
                 err.response?.data?.message ||
-                "Failed to fetch party or vehicle options"
+                "Failed to fetch party options"
             );
         }
-    }, [authHeaders]);
+    }, [authHeaders, getVehicles]);
 
     const getNextBillNo = useCallback(async () => {
         const response = await axios.get(`${API_BASE_URL}/bill/next-bill-no`, {
@@ -220,6 +258,86 @@ const BillGeneration = () => {
     useEffect(() => {
         getEntries(page, limit, debouncedSearch);
     }, [page, limit, debouncedSearch, getEntries]);
+
+    useEffect(() => {
+        if (
+            !showForm ||
+            !authHeaders.Authorization ||
+            !formData.sdate ||
+            !formData.edate ||
+            !formData.party ||
+            !formData.vehicleno
+        ) {
+            return;
+        }
+
+        if (formData.sdate > formData.edate) {
+            setFormData((current) => ({
+                ...current,
+                amt: "",
+            }));
+            return;
+        }
+
+        let isCancelled = false;
+
+        const fetchSalesTotal = async () => {
+            try {
+                setAmountLoading(true);
+
+                const response = await axios.get(`${API_BASE_URL}/bill/sales-total`, {
+                    params: {
+                        sdate: formData.sdate,
+                        edate: formData.edate,
+                        party: formData.party,
+                        vehicleno: formData.vehicleno,
+                    },
+                    headers: authHeaders,
+                });
+
+                if (isCancelled) {
+                    return;
+                }
+
+                if (response.data.status) {
+                    setFormData((current) => ({
+                        ...current,
+                        amt: toInputValue(response.data.data?.amt || "0.00"),
+                    }));
+                    return;
+                }
+
+                setError(response.data.message || "Failed to fetch sales total");
+            } catch (err) {
+                if (isCancelled) {
+                    return;
+                }
+
+                console.error("Sales total error:", err);
+                setError(
+                    err.response?.data?.message ||
+                    "Failed to fetch sales total"
+                );
+            } finally {
+                if (!isCancelled) {
+                    setAmountLoading(false);
+                }
+            }
+        };
+
+        fetchSalesTotal();
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [
+        showForm,
+        authHeaders,
+        formData.sdate,
+        formData.edate,
+        formData.party,
+        formData.vehicleno,
+    ]);
 
     const resetForm = () => {
         setFormData(getDefaultFormData());
@@ -249,6 +367,17 @@ const BillGeneration = () => {
 
     const handleChange = (e) => {
         const { name, value } = e.target;
+
+        if (name === "party") {
+            setFormData((current) => ({
+                ...current,
+                party: value,
+                vehicleno: "",
+                amt: "",
+            }));
+            getVehicles(value);
+            return;
+        }
 
         setFormData((current) => ({
             ...current,
@@ -301,7 +430,9 @@ const BillGeneration = () => {
                     response.data.message ||
                     (editId
                         ? "Bill entry updated successfully"
-                        : "Bill entry created successfully")
+                        : response.data.data?.count > 1
+                            ? `${response.data.data.count} bill entries created successfully`
+                            : "Bill entry created successfully")
                 );
 
                 resetForm();
@@ -329,7 +460,9 @@ const BillGeneration = () => {
         setError("");
     };
 
-    const handleEdit = (entry) => {
+    const handleEdit = async (entry) => {
+        await getVehicles(entry.party, toInputValue(entry.vehicleno));
+
         setEditId(entry.id);
         setFormData({
             sdate: toDateInputValue(entry.sdate),
@@ -499,6 +632,9 @@ const BillGeneration = () => {
                                 <div className="col-md-3">
                                     <label className="form-label fw-semibold">Vehicle No</label>
                                     <select className="form-select" name="vehicleno" value={formData.vehicleno} onChange={handleChange}>
+                                        {!editId && vehicles.length > 0 && (
+                                            <option value="all">All Vehicles</option>
+                                        )}
                                         {vehicles.map((vehicle) => (
                                             <option key={vehicle.id} value={vehicle.id}>
                                                 {vehicle.name || `Vehicle #${vehicle.id}`}
@@ -508,7 +644,10 @@ const BillGeneration = () => {
                                 </div>
                                 <div className="col-md-2">
                                     <label className="form-label fw-semibold">Amount</label>
-                                    <input type="number" step="0.01" className="form-control" name="amt" placeholder="Enter amount" value={formData.amt} onChange={handleChange} />
+                                    <input type="number" step="0.01" className="form-control" name="amt" placeholder={amountLoading ? "Fetching..." : "Enter amount"} value={formData.amt} onChange={handleChange} />
+                                    {amountLoading && (
+                                        <small className="text-muted">Calculating sales total...</small>
+                                    )}
                                 </div>
                                 <div className="col-md-3">
                                     <label className="form-label fw-semibold">Type</label>

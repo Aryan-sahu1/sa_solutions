@@ -681,9 +681,7 @@ const Purchase = () => {
             <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
                 <div>
                     <h2 className="fw-bold mb-1">Purchase</h2>
-                    <p className="text-muted mb-0">
-                        One purchase entry can contain multiple item details
-                    </p>
+                    
                 </div>
 
                 <button
@@ -970,7 +968,7 @@ const Purchase = () => {
                         onPage={handlePageChange}
                         onRowClick={(event) => setSelectedEntry(event.data)}
                         responsiveLayout="scroll"
-                        tableStyle={{ minWidth: "58rem", cursor: "pointer" }}
+                        tableStyle={{ minWidth: "40rem", cursor: "pointer" }}
                         emptyMessage={debouncedSearch ? "No purchase found for this search" : "No purchase found"}
                         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown"
                         currentPageReportTemplate="Showing {first} to {last} of {totalRecords} purchase"

@@ -30,6 +30,9 @@ import ProductPagePlaceholder from "./component/ProductPagePlaceholder";
 import { mergedProductRoutes } from "./config/productConfig";
 import Sales from "./component/Sales";
 import Purchase from "./component/Purchase";
+import Nozel from "./component/Nozel";
+import Meter from "./component/Meter";
+import Reports from "./Reports/Reports";
 
 const implementedProductRoutes = new Set([
     "/dashboard",
@@ -49,6 +52,8 @@ const implementedProductRoutes = new Set([
     "/bill-generation",
     "/only-bill",
     "/leak",
+    "/nozel",
+    "/meter",
 ]);
 
 const placeholderRoutes = mergedProductRoutes.filter(
@@ -143,14 +148,33 @@ const App = () => {
                             element={<CashReceiptPayment />}
                         />
 
-                          <Route
+                        <Route
                             path="/sale"
                             element={<Sales />}
                         />
 
-                          <Route
+                        <Route
                             path="/purchase"
                             element={<Purchase />}
+                        />
+
+                        <Route
+                            path="/nozel"
+                            element={<Nozel />}
+                        />
+
+                        <Route
+                            path="/meter"
+                            element={<Meter />}
+                        />
+                        <Route
+                            path="/reports"
+                            element={<Reports />}
+                        />
+
+                        <Route
+                            path="/meter"
+                            element={<Meter />}
                         />
 
                         <Route

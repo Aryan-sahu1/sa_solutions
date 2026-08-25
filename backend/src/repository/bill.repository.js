@@ -14,6 +14,31 @@ const findNextBillNo = async (userId) => {
     return String(nextNumber).padStart(3, "0");
 };
 
+const findSalesTotal = async ({ userId, party, sdate, edate, vehicleno = "" }) => {
+    const params = [userId, party, sdate, edate];
+    let vehicleWhere = "";
+
+    if (vehicleno) {
+        vehicleWhere = "AND tr.vehicle_no = ?";
+        params.push(vehicleno);
+    }
+
+    const sql = `
+        SELECT COALESCE(SUM(CAST(tr.amt AS DECIMAL(15,2))), 0) AS total_amount
+        FROM tran tr
+        WHERE tr.deleted_at IS NULL
+        AND tr.cid = ?
+        AND tr.type = 'S'
+        AND tr.pid = ?
+        AND DATE(tr.date) BETWEEN ? AND ? AND type='S'
+        ${vehicleWhere}
+    `;
+
+    const [rows] = await db.query(sql, params);
+
+    return rows[0]?.total_amount || 0;
+};
+
 const create = async (body, userId) => {
     const sql = `
         INSERT INTO bill (
@@ -225,6 +250,7 @@ const remove = async (id, userId) => {
 
 module.exports = {
     findNextBillNo,
+    findSalesTotal,
     create,
     findAll,
     findById,

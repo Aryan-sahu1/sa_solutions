@@ -2,49 +2,65 @@ const db = require("../config/db");
 
 const create = async (body, userId) => {
     const sql = `
-        INSERT INTO product_category (name, cid, unit)
-        VALUES (?, ?, ?)
+        INSERT INTO nozel (name, snno, pid, cid)
+        VALUES (?, ?, ?, ?)
     `;
 
     const [result] = await db.query(sql, [
         body.name,
-        userId,
-        body.unit
+        body.snno,
+        body.pid,
+        userId
     ]);
 
     return result;
 };
 
-const findAll = async ({ userId, page = 1, limit = 10, search = "" } = {}) => {
+const findAll = async ({ userId, page = 1, limit = 10, search = "", productId = "" } = {}) => {
     const offset = (page - 1) * limit;
 
-    let where = `WHERE deleted_at IS NULL AND cid = ?`;
+    let where = `WHERE n.deleted_at IS NULL AND n.cid = ?`;
     const params = [userId];
 
     if (search && String(search).trim() !== "") {
-        where += ` AND (name LIKE ? OR unit LIKE ?)`;
+        where += ` AND (n.name LIKE ? OR n.snno LIKE ? OR pc.name LIKE ?)`;
         const searchTerm = `%${String(search).trim()}%`;
-        params.push(searchTerm, searchTerm);
+        params.push(searchTerm, searchTerm, searchTerm);
+    }
+
+    if (productId && String(productId).trim() !== "") {
+        where += ` AND n.pid = ?`;
+        params.push(productId);
     }
 
     const dataSql = `
         SELECT
-            id,
-            name,
-            cid,
-            unit,
-            created_at,
-            updated_at,
-            deleted_at
-        FROM product_category
+            n.id,
+            n.name,
+            n.snno,
+            n.pid,
+            n.cid,
+            pc.name AS product_name,
+            n.created_at,
+            n.updated_at,
+            n.deleted_at
+        FROM nozel n
+        LEFT JOIN product_category pc
+            ON pc.id = n.pid
+            AND pc.cid = n.cid
+            AND pc.deleted_at IS NULL
         ${where}
-        ORDER BY id DESC
+        ORDER BY n.snno DESC
         LIMIT ? OFFSET ?
     `;
 
     const countSql = `
         SELECT COUNT(*) AS total
-        FROM product_category
+        FROM nozel n
+        LEFT JOIN product_category pc
+            ON pc.id = n.pid
+            AND pc.cid = n.cid
+            AND pc.deleted_at IS NULL
         ${where}
     `;
 
@@ -74,17 +90,23 @@ const findAll = async ({ userId, page = 1, limit = 10, search = "" } = {}) => {
 const findById = async (id, userId) => {
     const sql = `
         SELECT
-            id,
-            name,
-            cid,
-            unit,
-            created_at,
-            updated_at,
-            deleted_at
-        FROM product_category
-        WHERE id = ?
-        AND cid = ?
-        AND deleted_at IS NULL
+            n.id,
+            n.name,
+            n.snno,
+            n.pid,
+            n.cid,
+            pc.name AS product_name,
+            n.created_at,
+            n.updated_at,
+            n.deleted_at
+        FROM nozel n
+        LEFT JOIN product_category pc
+            ON pc.id = n.pid
+            AND pc.cid = n.cid
+            AND pc.deleted_at IS NULL
+        WHERE n.id = ?
+        AND n.cid = ?
+        AND n.deleted_at IS NULL
     `;
 
     const [rows] = await db.query(sql, [id, userId]);
@@ -92,33 +114,13 @@ const findById = async (id, userId) => {
     return rows[0] || null;
 };
 
-const findFirst = async (userId) => {
-    const sql = `
-        SELECT
-            id,
-            name,
-            cid,
-            unit,
-            created_at,
-            updated_at,
-            deleted_at
-        FROM product_category
-        WHERE cid = ?
-        AND deleted_at IS NULL
-        ORDER BY id ASC
-        LIMIT 1
-    `;
-
-    const [rows] = await db.query(sql, [userId]);
-
-    return rows[0] || null;
-};
-
 const update = async (id, body, userId) => {
     const sql = `
-        UPDATE product_category
+        UPDATE nozel
         SET name = ?,
-            unit = ?
+            snno = ?,
+            pid = ?,
+            updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
         AND cid = ?
         AND deleted_at IS NULL
@@ -126,7 +128,8 @@ const update = async (id, body, userId) => {
 
     const [result] = await db.query(sql, [
         body.name,
-        body.unit,
+        body.snno,
+        body.pid,
         id,
         userId
     ]);
@@ -136,7 +139,7 @@ const update = async (id, body, userId) => {
 
 const remove = async (id, userId) => {
     const sql = `
-        UPDATE product_category
+        UPDATE nozel
         SET deleted_at = CURRENT_TIMESTAMP
         WHERE id = ?
         AND cid = ?
@@ -151,7 +154,6 @@ const remove = async (id, userId) => {
 module.exports = {
     create,
     findAll,
-    findFirst,
     findById,
     update,
     remove

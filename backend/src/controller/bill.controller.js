@@ -16,13 +16,29 @@ const findNextBillNo = async (req, res, next) => {
     }
 };
 
+const findSalesTotal = async (req, res, next) => {
+    try {
+        const data = await billService.findSalesTotal(req.query, req.user.id);
+
+        return res.status(200).json({
+            status: true,
+            message: "Sales total fetched successfully",
+            data
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 const create = async (req, res, next) => {
     try {
         const result = await billService.create(req.body, req.user.id);
 
         return res.status(201).json({
             status: true,
-            message: "Bill entry created successfully",
+            message: result.count > 1
+                ? `${result.count} bill entries created successfully`
+                : "Bill entry created successfully",
             data: result
         });
     } catch (error) {
@@ -93,6 +109,7 @@ const remove = async (req, res, next) => {
 
 module.exports = {
     findNextBillNo,
+    findSalesTotal,
     create,
     findAll,
     findById,
