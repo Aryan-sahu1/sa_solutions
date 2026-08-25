@@ -59,6 +59,39 @@ const findAll = async (options = {}) => {
     return { rows: mapped, total };
 };
 
+const findReportOptionsByCustomerProduct = async (options = {}) => {
+    let page = Number(options.page) || 1;
+    let limit = Number(options.limit) || 1000;
+
+    if (page < 1) page = 1;
+    if (limit < 1) limit = 1000;
+
+    if (!options.productId) {
+        throw new Error("productId is required");
+    }
+
+    const result = await masterRepository.findReportOptionsByCustomerProduct({
+        productId: options.productId,
+        page,
+        limit,
+        search: options.search || ""
+    });
+
+    return {
+        rows: result.rows.map((item) => ({
+            id: item.id,
+            sid: item.sid,
+            product_id: item.product_id,
+            master_list_name: item.master_list_name,
+            name: item.name,
+            created_at: item.created_at,
+            updated_at: item.updated_at,
+            deleted_at: item.deleted_at
+        })),
+        total: result.total || 0
+    };
+};
+
 const findById = async (id) => {
     const data = await masterRepository.findById(id);
 
@@ -102,6 +135,7 @@ const remove = async (id) => {
 module.exports = {
     create,
     findAll,
+    findReportOptionsByCustomerProduct,
     findById,
     update,
     remove

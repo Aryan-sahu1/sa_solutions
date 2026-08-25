@@ -58,12 +58,12 @@ const findByCustomerProduct = async (req, res, next) => {
             productId: req.customer?.product_id
         };
 
-        const result = await masterService.findAll(options);
+        const result = await masterService.findReportOptionsByCustomerProduct(options);
         const totalPages = Math.ceil(result.total / options.limit);
 
         return res.status(200).json({
             status: true,
-            message: "Staff categories fetched successfully",
+            message: "Report options fetched successfully",
             data: result.rows,
             pagination: {
                 total: result.total || 0,
