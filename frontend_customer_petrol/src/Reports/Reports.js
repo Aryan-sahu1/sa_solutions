@@ -29,9 +29,13 @@ const normalizeReportName = (value = "") => (
     String(value).trim().toLowerCase().replace(/[^a-z0-9]/g, "")
 );
 
-const isTrialBalanceReport = (report) => (
-    normalizeReportName(report?.name).includes("trialbalance") ||
-    normalizeReportName(report?.name).includes("trailbalance")
+const isTrialBalanceReport = (report) => {
+    const name = normalizeReportName(report?.name);
+    return name.includes("trialbalance") || name.includes("trailbalance");
+};
+
+const isAccountStatementReport = (report) => (
+    normalizeReportName(report?.name).includes("accountstatement")
 );
 
 const Reports = () => {
@@ -45,10 +49,19 @@ const Reports = () => {
     const [parties, setParties] = useState([]);
     const [rows, setRows] = useState([]);
     const [totals, setTotals] = useState(null);
+    const [statementParty, setStatementParty] = useState(null);
+    const [openingBalance, setOpeningBalance] = useState(0);
+    const [closingBalance, setClosingBalance] = useState(0);
     const [optionLoading, setOptionLoading] = useState(false);
     const [reportLoading, setReportLoading] = useState(false);
     const [message, setMessage] = useState("");
     const [error, setError] = useState("");
+
+    const selectedReport = reports.find(
+        (report) => String(report.id) === String(formData.masterId)
+    );
+    const isTrialBalanceActive = isTrialBalanceReport(selectedReport);
+    const isAccountStatementActive = isAccountStatementReport(selectedReport);
 
     const getOptions = useCallback(async () => {
         if (!authHeaders.Authorization) {
@@ -81,7 +94,6 @@ const Reports = () => {
 
             setReports(nextReports);
             setParties(nextParties);
-
             setFormData((current) => ({
                 ...current,
                 masterId: current.masterId || String(nextReports[0]?.id || ""),
@@ -98,6 +110,14 @@ const Reports = () => {
         getOptions();
     }, [getOptions]);
 
+    const clearReportData = () => {
+        setRows([]);
+        setTotals(null);
+        setStatementParty(null);
+        setOpeningBalance(0);
+        setClosingBalance(0);
+    };
+
     const handleChange = (e) => {
         const { checked, name, type, value } = e.target;
 
@@ -106,17 +126,10 @@ const Reports = () => {
             [name]: type === "checkbox" ? checked : value,
         }));
 
-        if (name === "masterId") {
-            const selectedReport = reports.find(
-                (report) => String(report.id) === String(value)
-            );
-
-            if (!isTrialBalanceReport(selectedReport)) {
-                setRows([]);
-                setTotals(null);
-                setMessage("");
-                setError("");
-            }
+        if (["masterId", "partyId", "fromDate", "toDate"].includes(name)) {
+            clearReportData();
+            setMessage("");
+            setError("");
         }
     };
 
@@ -127,8 +140,7 @@ const Reports = () => {
             toDate: getCurrentDateValue(),
             masterId: String(reports[0]?.id || ""),
         });
-        setRows([]);
-        setTotals(null);
+        clearReportData();
         setMessage("");
         setError("");
     };
@@ -139,6 +151,52 @@ const Reports = () => {
             maximumFractionDigits: 2,
             useGrouping: false,
         })
+    );
+
+    const formatDisplayDate = (value) => {
+        if (!value) return "";
+
+        const [year, month, day] = String(value).split("-");
+        if (!year || !month || !day) return value;
+
+        return `${day}/${month}/${year.slice(-2)}`;
+    };
+
+    const formatBalance = (value) => {
+        const balance = Number(value || 0);
+        if (balance === 0) return "0.00";
+
+        return `${formatAmount(Math.abs(balance))} ${balance >= 0 ? "Dr" : "Cr"}`;
+    };
+
+    const reportTitle = (
+        customer?.firm_name ||
+        customer?.company_name ||
+        customer?.name ||
+        "HAMARA PUMP JASPURA"
+    );
+    const dateRangeLabel =
+        `${formatDisplayDate(formData.fromDate)}-${formatDisplayDate(formData.toDate)}`;
+    const reportHeading = isAccountStatementActive
+        ? "ACCOUNT STATEMENT"
+        : "CLOSING BALANCE";
+
+    const drAmount = (row) => (
+        Number(row.closing_balance || 0) > 0 ? formatAmount(row.closing_balance) : "-"
+    );
+
+    const crAmount = (row) => (
+        Number(row.closing_balance || 0) < 0
+            ? formatAmount(Math.abs(Number(row.closing_balance || 0)))
+            : "-"
+    );
+
+    const statementDebit = (row) => (
+        Number(row.debit || 0) > 0 ? formatAmount(row.debit) : "-"
+    );
+
+    const statementCredit = (row) => (
+        Number(row.credit || 0) > 0 ? formatAmount(row.credit) : "-"
     );
 
     const handleSubmit = async (e) => {
@@ -161,13 +219,14 @@ const Reports = () => {
             return;
         }
 
-        const selectedReport = reports.find(
-            (report) => String(report.id) === String(formData.masterId)
-        );
+        if (!isTrialBalanceActive && !isAccountStatementActive) {
+            clearReportData();
+            return;
+        }
 
-        if (!isTrialBalanceReport(selectedReport)) {
-            setRows([]);
-            setTotals(null);
+        if (isAccountStatementActive && !formData.partyId) {
+            clearReportData();
+            setError("Transaction Party is required for Account Statement");
             return;
         }
 
@@ -177,102 +236,57 @@ const Reports = () => {
             const params = {
                 fromDate: formData.fromDate,
                 toDate: formData.toDate,
-                includeZero: formData.includeZero,
             };
 
             if (formData.partyId) {
                 params.partyId = formData.partyId;
             }
 
-            const response = await axios.get(
-                `${API_BASE_URL}/reports/trial-balance`,
-                {
-                    params,
-                    headers: {
-                        ...authHeaders,
-                        "Cache-Control": "no-cache",
-                        Pragma: "no-cache",
-                    },
-                }
-            );
+            if (isTrialBalanceActive) {
+                params.includeZero = formData.includeZero;
+            }
+
+            const endpoint = isAccountStatementActive
+                ? "account-statement"
+                : "trial-balance";
+            const response = await axios.get(`${API_BASE_URL}/reports/${endpoint}`, {
+                params,
+                headers: {
+                    ...authHeaders,
+                    "Cache-Control": "no-cache",
+                    Pragma: "no-cache",
+                },
+            });
 
             if (response.data.status) {
                 setRows(response.data.data || []);
                 setTotals(response.data.totals || null);
+                setStatementParty(response.data.party || null);
+                setOpeningBalance(Number(response.data.opening_balance || 0));
+                setClosingBalance(Number(response.data.closing_balance || 0));
                 setMessage(response.data.message || "Report fetched successfully");
                 return;
             }
 
-            setRows([]);
-            setTotals(null);
+            clearReportData();
             setError(response.data.message || "Failed to fetch report");
         } catch (err) {
             console.error("Report fetch error:", err);
-            setRows([]);
-            setTotals(null);
+            clearReportData();
             setError(err.response?.data?.message || "Failed to fetch report");
         } finally {
             setReportLoading(false);
         }
     };
 
-    const formatDisplayDate = (value) => {
-        if (!value) {
-            return "";
-        }
-
-        const [year, month, day] = String(value).split("-");
-
-        if (!year || !month || !day) {
-            return value;
-        }
-
-        return `${day}/${month}/${year.slice(-2)}`;
-    };
-
-    const reportTitle = (
-        customer?.firm_name ||
-        customer?.company_name ||
-        customer?.name ||
-        "HAMARA PUMP JASPURA"
-    );
-
-    const dateRangeLabel = `${formatDisplayDate(formData.fromDate)}-${formatDisplayDate(formData.toDate)}`;
-
-    const drAmount = (row) => (
-        Number(row.closing_balance || 0) > 0 ? formatAmount(row.closing_balance) : "-"
-    );
-
-    const crAmount = (row) => (
-        Number(row.closing_balance || 0) < 0
-            ? formatAmount(Math.abs(Number(row.closing_balance || 0)))
-            : "-"
-    );
-
-    const buildPdfTableBody = () => {
+    const buildTrialBalancePdfTableBody = () => {
         const tableRows = rows.map((row, index) => [
-            { text: String(index + 1), alignment: "left" },
-            { text: row.party_name || "", alignment: "left" },
-            { text: row.phone_no || "", alignment: "left" },
+            String(index + 1),
+            row.party_name || "",
+            row.phone_no || "",
             { text: drAmount(row), alignment: "right" },
             { text: crAmount(row), alignment: "right" },
         ]);
-
-        const totalRow = [
-            "",
-            { text: "Total", colSpan: 2, alignment: "right", bold: true },
-            "",
-            {
-                text: formatAmount(totals?.trial_debit),
-                alignment: "right",
-                bold: true,
-            },
-            {
-                text: formatAmount(totals?.trial_credit),
-                alignment: "right",
-                bold: true,
-            },
-        ];
 
         return [
             [
@@ -283,9 +297,70 @@ const Reports = () => {
                 { text: "Cr Amount", bold: true, alignment: "right" },
             ],
             ...tableRows,
-            totalRow,
+            [
+                "",
+                { text: "Total", colSpan: 2, alignment: "right", bold: true },
+                "",
+                { text: formatAmount(totals?.trial_debit), alignment: "right", bold: true },
+                { text: formatAmount(totals?.trial_credit), alignment: "right", bold: true },
+            ],
         ];
     };
+
+    const buildAccountStatementPdfTableBody = () => {
+        const tableRows = rows.map((row, index) => [
+            String(index + 1),
+            formatDisplayDate(String(row.date || "").slice(0, 10)),
+            row.particular || "",
+            row.remarks || row.slip_no || "",
+            { text: statementDebit(row), alignment: "right" },
+            { text: statementCredit(row), alignment: "right" },
+            { text: formatBalance(row.balance), alignment: "right" },
+        ]);
+
+        return [
+            [
+                { text: "Sno", bold: true },
+                { text: "Date", bold: true },
+                { text: "Particular", bold: true },
+                { text: "Remarks", bold: true },
+                { text: "Debit", bold: true, alignment: "right" },
+                { text: "Credit", bold: true, alignment: "right" },
+                { text: "Balance", bold: true, alignment: "right" },
+            ],
+            [
+                "",
+                "",
+                { text: "Opening Balance", colSpan: 2, bold: true },
+                "",
+                "",
+                "",
+                { text: formatBalance(openingBalance), alignment: "right", bold: true },
+            ],
+            ...tableRows,
+            [
+                "",
+                "",
+                { text: "Total", colSpan: 2, alignment: "right", bold: true },
+                "",
+                { text: formatAmount(totals?.debit), alignment: "right", bold: true },
+                { text: formatAmount(totals?.credit), alignment: "right", bold: true },
+                { text: formatBalance(closingBalance), alignment: "right", bold: true },
+            ],
+        ];
+    };
+
+    const getPdfTable = () => (
+        isAccountStatementActive
+            ? {
+                widths: [25, 55, "*", 110, 65, 65, 75],
+                body: buildAccountStatementPdfTableBody(),
+            }
+            : {
+                widths: [30, "*", 120, 80, 80],
+                body: buildTrialBalancePdfTableBody(),
+            }
+    );
 
     const getPdfDefinition = () => ({
         pageSize: "A4",
@@ -320,7 +395,7 @@ const Reports = () => {
                                 margin: [0, 0, 0, 8],
                             },
                             {
-                                text: "CLOSING BALANCE",
+                                text: reportHeading,
                                 alignment: "right",
                             },
                         ],
@@ -328,11 +403,17 @@ const Reports = () => {
                 ],
                 margin: [0, 0, 0, 8],
             },
+            ...(isAccountStatementActive
+                ? [{
+                    text: `Account: ${statementParty?.name || ""}`,
+                    bold: true,
+                    margin: [0, 0, 0, 6],
+                }]
+                : []),
             {
                 table: {
                     headerRows: 1,
-                    widths: [30, "*", 120, 80, 80],
-                    body: buildPdfTableBody(),
+                    ...getPdfTable(),
                 },
                 layout: {
                     hLineWidth: () => 0.8,
@@ -347,20 +428,20 @@ const Reports = () => {
         ],
     });
 
-    const handlePrintPdf = () => {
-        if (rows.length === 0) {
-            return;
-        }
+    const canExportPdf = rows.length > 0 || (isAccountStatementActive && statementParty);
 
+    const handlePrintPdf = () => {
+        if (!canExportPdf) return;
         pdfMake.createPdf(getPdfDefinition()).print();
     };
 
     const handleDownloadPdf = () => {
-        if (rows.length === 0) {
-            return;
-        }
+        if (!canExportPdf) return;
+        const fileName = isAccountStatementActive
+            ? "account-statement.pdf"
+            : "trial-balance.pdf";
 
-        pdfMake.createPdf(getPdfDefinition()).download("trial-balance.pdf");
+        pdfMake.createPdf(getPdfDefinition()).download(fileName);
     };
 
     return (
@@ -454,7 +535,7 @@ const Reports = () => {
                                         name="includeZero"
                                         checked={formData.includeZero}
                                         onChange={handleChange}
-                                        disabled={reportLoading}
+                                        disabled={reportLoading || isAccountStatementActive}
                                     />
                                     <label
                                         className="form-check-label fw-semibold"
@@ -487,7 +568,7 @@ const Reports = () => {
                                     type="button"
                                     className="btn btn-outline-dark ms-2"
                                     onClick={handlePrintPdf}
-                                    disabled={reportLoading || rows.length === 0}
+                                    disabled={reportLoading || !canExportPdf}
                                 >
                                     Print PDF
                                 </button>
@@ -496,7 +577,7 @@ const Reports = () => {
                                     type="button"
                                     className="btn btn-outline-primary ms-2"
                                     onClick={handleDownloadPdf}
-                                    disabled={reportLoading || rows.length === 0}
+                                    disabled={reportLoading || !canExportPdf}
                                 >
                                     Download PDF
                                 </button>
@@ -514,63 +595,160 @@ const Reports = () => {
                     </div>
                     <div className="report-heading-right">
                         <div>Page No. 1</div>
-                        <div>CLOSING BALANCE</div>
+                        <div>{reportHeading}</div>
                     </div>
                 </div>
 
+                {isAccountStatementActive && statementParty && (
+                    <div className="statement-party">
+                        Account: {statementParty.name}
+                        {statementParty.phone_no ? ` | Phone: ${statementParty.phone_no}` : ""}
+                    </div>
+                )}
+
                 <div className="table-responsive">
-                    <table className="closing-report-table">
-                        <thead>
-                            <tr>
-                                <th className="sno-col">Sno</th>
-                                <th>party name</th>
-                                <th className="phone-col">Phone No</th>
-                                <th className="amount-col">Dr Amount</th>
-                                <th className="amount-col">Cr Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {reportLoading && (
+                    {!isAccountStatementActive && (
+                        <table className="closing-report-table">
+                            <thead>
                                 <tr>
-                                    <td colSpan="5" className="text-center py-3">
-                                        Loading...
-                                    </td>
+                                    <th className="sno-col">Sno</th>
+                                    <th>party name</th>
+                                    <th className="phone-col">Phone No</th>
+                                    <th className="amount-col">Dr Amount</th>
+                                    <th className="amount-col">Cr Amount</th>
                                 </tr>
-                            )}
+                            </thead>
+                            <tbody>
+                                {reportLoading && (
+                                    <tr>
+                                        <td colSpan="5" className="text-center py-3">
+                                            Loading...
+                                        </td>
+                                    </tr>
+                                )}
 
-                            {!reportLoading && rows.length === 0 && (
-                                <tr>
-                                    <td colSpan="5" className="text-center py-3">
-                                        No trial balance data found
-                                    </td>
-                                </tr>
-                            )}
+                                {!reportLoading && rows.length === 0 && (
+                                    <tr>
+                                        <td colSpan="5" className="text-center py-3">
+                                            No trial balance data found
+                                        </td>
+                                    </tr>
+                                )}
 
-                            {!reportLoading && rows.map((row, index) => (
-                                <tr key={row.party_id}>
-                                    <td>{index + 1}</td>
-                                    <td>{row.party_name}</td>
-                                    <td>{row.phone_no || ""}</td>
-                                    <td className="amount-cell">{drAmount(row)}</td>
-                                    <td className="amount-cell">{crAmount(row)}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                        {rows.length > 0 && (
-                            <tfoot>
+                                {!reportLoading && rows.map((row, index) => (
+                                    <tr key={row.party_id}>
+                                        <td>{index + 1}</td>
+                                        <td>{row.party_name}</td>
+                                        <td>{row.phone_no || ""}</td>
+                                        <td className="amount-cell">{drAmount(row)}</td>
+                                        <td className="amount-cell">{crAmount(row)}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                            {rows.length > 0 && (
+                                <tfoot>
+                                    <tr>
+                                        <td />
+                                        <td colSpan="2" className="text-end">Total</td>
+                                        <td className="amount-cell">
+                                            {formatAmount(totals?.trial_debit)}
+                                        </td>
+                                        <td className="amount-cell">
+                                            {formatAmount(totals?.trial_credit)}
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                            )}
+                        </table>
+                    )}
+
+                    {isAccountStatementActive && (
+                        <table className="closing-report-table statement-report-table">
+                            <thead>
                                 <tr>
-                                    <td />
-                                    <td colSpan="2" className="text-end">Total</td>
-                                    <td className="amount-cell">
-                                        {formatAmount(totals?.trial_debit)}
-                                    </td>
-                                    <td className="amount-cell">
-                                        {formatAmount(totals?.trial_credit)}
-                                    </td>
+                                    <th className="sno-col">Sno</th>
+                                    <th className="date-col">Date</th>
+                                    <th>Particular</th>
+                                    <th>Remarks</th>
+                                    <th className="amount-col">Debit</th>
+                                    <th className="amount-col">Credit</th>
+                                    <th className="balance-col">Balance</th>
                                 </tr>
-                            </tfoot>
-                        )}
-                    </table>
+                            </thead>
+                            <tbody>
+                                {reportLoading && (
+                                    <tr>
+                                        <td colSpan="7" className="text-center py-3">
+                                            Loading...
+                                        </td>
+                                    </tr>
+                                )}
+
+                                {!reportLoading && !statementParty && (
+                                    <tr>
+                                        <td colSpan="7" className="text-center py-3">
+                                            Select party and view account statement
+                                        </td>
+                                    </tr>
+                                )}
+
+                                {!reportLoading && statementParty && (
+                                    <tr>
+                                        <td />
+                                        <td />
+                                        <td colSpan="2" className="fw-bold">
+                                            Opening Balance
+                                        </td>
+                                        <td />
+                                        <td />
+                                        <td className="amount-cell fw-bold">
+                                            {formatBalance(openingBalance)}
+                                        </td>
+                                    </tr>
+                                )}
+
+                                {!reportLoading && rows.map((row, index) => (
+                                    <tr key={row.id}>
+                                        <td>{index + 1}</td>
+                                        <td>
+                                            {formatDisplayDate(
+                                                String(row.date || "").slice(0, 10)
+                                            )}
+                                        </td>
+                                        <td>{row.particular || ""}</td>
+                                        <td>{row.remarks || row.slip_no || ""}</td>
+                                        <td className="amount-cell">
+                                            {statementDebit(row)}
+                                        </td>
+                                        <td className="amount-cell">
+                                            {statementCredit(row)}
+                                        </td>
+                                        <td className="amount-cell">
+                                            {formatBalance(row.balance)}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                            {statementParty && (
+                                <tfoot>
+                                    <tr>
+                                        <td />
+                                        <td />
+                                        <td colSpan="2" className="text-end">Total</td>
+                                        <td className="amount-cell">
+                                            {formatAmount(totals?.debit)}
+                                        </td>
+                                        <td className="amount-cell">
+                                            {formatAmount(totals?.credit)}
+                                        </td>
+                                        <td className="amount-cell">
+                                            {formatBalance(closingBalance)}
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                            )}
+                        </table>
+                    )}
                 </div>
             </div>
 
@@ -618,6 +796,12 @@ const Reports = () => {
                     text-align: right;
                 }
 
+                .statement-party {
+                    margin-bottom: 8px;
+                    font-size: 15px;
+                    font-weight: 700;
+                }
+
                 .closing-report-table {
                     width: 100%;
                     border-collapse: collapse;
@@ -647,6 +831,10 @@ const Reports = () => {
                     width: 48px;
                 }
 
+                .date-col {
+                    width: 88px;
+                }
+
                 .phone-col {
                     width: 230px;
                 }
@@ -656,8 +844,17 @@ const Reports = () => {
                     text-align: right !important;
                 }
 
+                .balance-col {
+                    width: 140px;
+                    text-align: right !important;
+                }
+
                 .amount-cell {
                     text-align: right;
+                }
+
+                .statement-report-table {
+                    min-width: 920px;
                 }
 
                 @media (max-width: 767.98px) {
