@@ -3,6 +3,10 @@ import axios from "axios";
 import pdfMake from "pdfmake/build/pdfmake";
 import pdfFonts from "pdfmake/build/vfs_fonts";
 import { useAuth } from "../context/AuthContext";
+import DailyReportPaper, {
+    formatDailyAmount,
+    formatDailyDate,
+} from "./DailyReportPaper";
 
 const API_BASE_URL = "http://localhost:4000/api";
 
@@ -14,6 +18,12 @@ const initialFormData = {
     masterId: "",
     partyId: "",
     includeZero: false,
+};
+
+const DAILY_REPORT_ID = "__daily_report__";
+const DAILY_REPORT_OPTION = {
+    id: DAILY_REPORT_ID,
+    name: "Daily Report",
 };
 
 const getCurrentDateValue = () => {
@@ -38,6 +48,11 @@ const isAccountStatementReport = (report) => (
     normalizeReportName(report?.name).includes("accountstatement")
 );
 
+const isDailyReport = (report) => (
+    String(report?.id) === DAILY_REPORT_ID ||
+    normalizeReportName(report?.name).includes("dailyreport")
+);
+
 const Reports = () => {
     const { authHeaders, customer } = useAuth();
     const [formData, setFormData] = useState({
@@ -50,6 +65,7 @@ const Reports = () => {
     const [rows, setRows] = useState([]);
     const [totals, setTotals] = useState(null);
     const [statementParty, setStatementParty] = useState(null);
+    const [dailyReport, setDailyReport] = useState(null);
     const [openingBalance, setOpeningBalance] = useState(0);
     const [closingBalance, setClosingBalance] = useState(0);
     const [optionLoading, setOptionLoading] = useState(false);
@@ -62,6 +78,7 @@ const Reports = () => {
     );
     const isTrialBalanceActive = isTrialBalanceReport(selectedReport);
     const isAccountStatementActive = isAccountStatementReport(selectedReport);
+    const isDailyReportActive = isDailyReport(selectedReport);
 
     const getOptions = useCallback(async () => {
         if (!authHeaders.Authorization) {
@@ -92,11 +109,11 @@ const Reports = () => {
                     ? partyResult.value.data.data || []
                     : [];
 
-            setReports(nextReports);
+            setReports([DAILY_REPORT_OPTION, ...nextReports]);
             setParties(nextParties);
             setFormData((current) => ({
                 ...current,
-                masterId: current.masterId || String(nextReports[0]?.id || ""),
+                masterId: current.masterId || DAILY_REPORT_ID,
             }));
         } catch (err) {
             console.error("Report option error:", err);
@@ -116,6 +133,7 @@ const Reports = () => {
         setStatementParty(null);
         setOpeningBalance(0);
         setClosingBalance(0);
+        setDailyReport(null);
     };
 
     const handleChange = (e) => {
@@ -177,7 +195,9 @@ const Reports = () => {
     );
     const dateRangeLabel =
         `${formatDisplayDate(formData.fromDate)}-${formatDisplayDate(formData.toDate)}`;
-    const reportHeading = isAccountStatementActive
+    const reportHeading = isDailyReportActive
+        ? "DAILY REPORT"
+        : isAccountStatementActive
         ? "ACCOUNT STATEMENT"
         : "CLOSING BALANCE";
 
@@ -219,7 +239,7 @@ const Reports = () => {
             return;
         }
 
-        if (!isTrialBalanceActive && !isAccountStatementActive) {
+        if (!isTrialBalanceActive && !isAccountStatementActive && !isDailyReportActive) {
             clearReportData();
             return;
         }
@@ -238,7 +258,7 @@ const Reports = () => {
                 toDate: formData.toDate,
             };
 
-            if (formData.partyId) {
+            if (formData.partyId && !isDailyReportActive) {
                 params.partyId = formData.partyId;
             }
 
@@ -246,7 +266,13 @@ const Reports = () => {
                 params.includeZero = formData.includeZero;
             }
 
-            const endpoint = isAccountStatementActive
+            if (isDailyReportActive) {
+                params.date = formData.fromDate;
+            }
+
+            const endpoint = isDailyReportActive
+                ? "daily-report"
+                : isAccountStatementActive
                 ? "account-statement"
                 : "trial-balance";
             const response = await axios.get(`${API_BASE_URL}/reports/${endpoint}`, {
@@ -259,6 +285,17 @@ const Reports = () => {
             });
 
             if (response.data.status) {
+                if (isDailyReportActive) {
+                    setDailyReport(response.data.data || null);
+                    setRows([]);
+                    setTotals(null);
+                    setStatementParty(null);
+                    setOpeningBalance(0);
+                    setClosingBalance(0);
+                    setMessage(response.data.message || "Report fetched successfully");
+                    return;
+                }
+
                 setRows(response.data.data || []);
                 setTotals(response.data.totals || null);
                 setStatementParty(response.data.party || null);
@@ -428,20 +465,166 @@ const Reports = () => {
         ],
     });
 
-    const canExportPdf = rows.length > 0 || (isAccountStatementActive && statementParty);
+    const buildDailyReportPdfDefinition = () => {
+        const pumpRows = dailyReport?.pumpwise?.rows || [];
+        const salesProducts = dailyReport?.sales?.products || [];
+        const salesParties = dailyReport?.sales?.parties || [];
+        const cashRows = dailyReport?.cash?.rows || [];
+        const stockRows = dailyReport?.stock || [];
+        const closingCashValue = Number(dailyReport?.totals?.closingCash || 0);
+        const salesTotal = Number(dailyReport?.sales?.totalAmount || 0);
+        const maxSalesRows = Math.max(salesProducts.length + 1, salesParties.length + 1, 5);
+        const groupedPumpRows = pumpRows.reduce((acc, row) => {
+            const key = row.product_id || row.product_name || "Other";
+            const group = acc.find((item) => item.key === key);
+
+            if (group) {
+                group.rows.push(row);
+                group.total += Number(row.sale || 0);
+                return acc;
+            }
+
+            acc.push({ key, rows: [row], total: Number(row.sale || 0) });
+            return acc;
+        }, []);
+        const pumpBody = [
+            ["Pump Name", "Op. Reading", "Cl. Reading", "Testing", "Sale"],
+            ...groupedPumpRows.flatMap((group) => [
+                ...group.rows.map((row) => [
+                    row.pump_name || row.pump_serial_no || row.product_name || "",
+                    formatDailyAmount(row.opening, 3),
+                    formatDailyAmount(row.closing, 3),
+                    Number(row.testing || 0) === 0 ? "-" : formatDailyAmount(row.testing),
+                    Number(row.sale || 0) === 0 ? "-" : formatDailyAmount(row.sale),
+                ]),
+                ["", "", "", "", { text: formatDailyAmount(group.total), bold: true }],
+                ["", "", "", "", ""],
+            ]),
+        ];
+        const salesBody = [
+            ["Item", "Rate", "Qty", "Amount", "Party", "Item", "Qty/Vehicle No", "Amount"],
+            ...Array.from({ length: maxSalesRows }).map((_, index) => {
+                const product = index === 0
+                    ? { product_name: "Opening Balance", amount: closingCashValue }
+                    : salesProducts[index - 1];
+                const party = salesParties[index];
+
+                return [
+                    product?.product_name || "",
+                    product?.rate ? formatDailyAmount(product.rate) : "-",
+                    product?.qty ? formatDailyAmount(product.qty) : "-",
+                    product ? formatDailyAmount(product.amount) : "-",
+                    party?.party_name || "",
+                    party?.item_name || "",
+                    party?.vehicle_name || party?.slip_no || "",
+                    party ? formatDailyAmount(party.amount) : "",
+                ];
+            }),
+            ["", "", "", "", "", "", { text: "Closing Balance", color: "red", bold: true }, { text: formatDailyAmount(closingCashValue), color: "red", bold: true }],
+            ["", "", "", { text: formatDailyAmount(salesTotal + closingCashValue), bold: true }, "", "", "", { text: formatDailyAmount(salesTotal + closingCashValue), bold: true }],
+        ];
+        const stockBody = [
+            ["Name of Product", "Opening Stock", "Purchase", "Sales", "Stock", "Dip (Ltr)", "Difference"],
+            ...stockRows.map((row) => [
+                `${row.product_name || ""}\nCash : Q ${formatDailyAmount(row.sales)} Amt ${formatDailyAmount(row.sales_amount)}`,
+                formatDailyAmount(row.opening_stock),
+                formatDailyAmount(row.purchase),
+                formatDailyAmount(row.sales),
+                formatDailyAmount(row.stock),
+                formatDailyAmount(row.stock),
+                {
+                    text: formatDailyAmount(row.difference),
+                    color: Number(row.difference || 0) >= 0 ? "green" : "red",
+                },
+            ]),
+        ];
+
+        return {
+            pageSize: "A4",
+            pageMargins: [42, 28, 42, 28],
+            defaultStyle: { fontSize: 8, color: "#000000" },
+            content: [
+                {
+                    columns: [
+                        { text: String(reportTitle).toUpperCase(), bold: true, fontSize: 15 },
+                        {
+                            text: `Daily Report for : ${formatDailyDate(dailyReport?.date)}`,
+                            bold: true,
+                            alignment: "right",
+                            fontSize: 10,
+                        },
+                    ],
+                    margin: [0, 0, 0, 8],
+                },
+                { text: "Pumpwise Breakup", bold: true, decoration: "underline", margin: [0, 0, 0, 2] },
+                {
+                    table: { headerRows: 1, widths: ["*", 75, 75, 65, 65], body: pumpBody },
+                    layout: "lightHorizontalLines",
+                    margin: [0, 0, 0, 8],
+                },
+                { text: "Sales", bold: true, decoration: "underline", margin: [0, 0, 0, 2] },
+                {
+                    table: { headerRows: 1, widths: ["*", 45, 45, 65, "*", 48, 72, 65], body: salesBody },
+                    layout: "lightHorizontalLines",
+                    margin: [0, 0, 0, 6],
+                },
+                ...(cashRows.length > 0 ? [
+                    {
+                        text: `BANK AAMAD ${formatDailyAmount(dailyReport?.cash?.receiptTotal, 0)} - UDHAARI ${formatDailyAmount(dailyReport?.cash?.paymentTotal, 0)}`,
+                        bold: true,
+                        margin: [0, 0, 0, 2],
+                    },
+                    {
+                        table: {
+                            headerRows: 1,
+                            widths: ["*", "*", 65, "*"],
+                            body: [
+                                ["Debit Party", "Credit Party", "Amount", "Remarks"],
+                                ...cashRows.map((row) => [
+                                    row.debit_party || "",
+                                    row.credit_party || "",
+                                    formatDailyAmount(row.amount),
+                                    row.remarks || row.type1 || "",
+                                ]),
+                            ],
+                        },
+                        layout: "noBorders",
+                        margin: [0, 0, 0, 8],
+                    },
+                ] : []),
+                { text: "Stock Report", bold: true, decoration: "underline", margin: [0, 0, 0, 2] },
+                { text: "<------SOLD------>", bold: true, alignment: "center", margin: [0, 0, 0, 2] },
+                {
+                    table: { headerRows: 1, widths: ["*", 65, 55, 55, 55, 55, 60], body: stockBody },
+                    layout: "lightHorizontalLines",
+                },
+            ],
+        };
+    };
+
+    const canExportPdf =
+        Boolean(isDailyReportActive && dailyReport) ||
+        rows.length > 0 ||
+        (isAccountStatementActive && statementParty);
 
     const handlePrintPdf = () => {
         if (!canExportPdf) return;
-        pdfMake.createPdf(getPdfDefinition()).print();
+        pdfMake.createPdf(
+            isDailyReportActive ? buildDailyReportPdfDefinition() : getPdfDefinition()
+        ).print();
     };
 
     const handleDownloadPdf = () => {
         if (!canExportPdf) return;
-        const fileName = isAccountStatementActive
+        const fileName = isDailyReportActive
+            ? "daily-report.pdf"
+            : isAccountStatementActive
             ? "account-statement.pdf"
             : "trial-balance.pdf";
 
-        pdfMake.createPdf(getPdfDefinition()).download(fileName);
+        pdfMake.createPdf(
+            isDailyReportActive ? buildDailyReportPdfDefinition() : getPdfDefinition()
+        ).download(fileName);
     };
 
     return (
@@ -485,6 +668,7 @@ const Reports = () => {
                                     name="toDate"
                                     value={formData.toDate}
                                     onChange={handleChange}
+                                    disabled={isDailyReportActive}
                                 />
                             </div>
 
@@ -515,7 +699,7 @@ const Reports = () => {
                                     name="partyId"
                                     value={formData.partyId}
                                     onChange={handleChange}
-                                    disabled={optionLoading || reportLoading}
+                                    disabled={optionLoading || reportLoading || isDailyReportActive}
                                 >
                                     <option value="">All parties</option>
                                     {parties.map((party) => (
@@ -533,9 +717,9 @@ const Reports = () => {
                                         type="checkbox"
                                         id="includeZero"
                                         name="includeZero"
-                                        checked={formData.includeZero}
-                                        onChange={handleChange}
-                                        disabled={reportLoading || isAccountStatementActive}
+                                    checked={formData.includeZero}
+                                    onChange={handleChange}
+                                    disabled={reportLoading || isAccountStatementActive || isDailyReportActive}
                                     />
                                     <label
                                         className="form-check-label fw-semibold"
@@ -587,6 +771,14 @@ const Reports = () => {
                 </div>
             </div>
 
+            {isDailyReportActive && dailyReport && (
+                <DailyReportPaper
+                    report={dailyReport}
+                    reportTitle={reportTitle}
+                />
+            )}
+
+            {!isDailyReportActive && (
             <div className="report-paper mt-4">
                 <div className="report-heading">
                     <div>
@@ -751,6 +943,7 @@ const Reports = () => {
                     )}
                 </div>
             </div>
+            )}
 
             <style>{`
                 .report-zero-check {
@@ -857,6 +1050,137 @@ const Reports = () => {
                     min-width: 920px;
                 }
 
+                .daily-report-paper {
+                    width: min(864px, 100%);
+                    margin: 24px auto 0;
+                    padding: 34px 52px 50px;
+                    background: #ffffff;
+                    color: #000000;
+                    border: 1px solid #cfcfcf;
+                    font-family: Arial, Helvetica, sans-serif;
+                    font-size: 12px;
+                    line-height: 1.2;
+                }
+
+                .daily-title-row {
+                    display: grid;
+                    grid-template-columns: 1fr auto;
+                    align-items: start;
+                    gap: 24px;
+                    border-bottom: 3px solid #111111;
+                    padding-bottom: 6px;
+                }
+
+                .daily-title-row h3 {
+                    margin: 0;
+                    font-size: 22px;
+                    font-weight: 800;
+                    letter-spacing: 0;
+                }
+
+                .daily-title-row h4 {
+                    margin: 0;
+                    font-size: 15px;
+                    font-weight: 800;
+                }
+
+                .daily-section {
+                    margin-top: 4px;
+                    border-bottom: 3px solid #111111;
+                    padding-bottom: 4px;
+                }
+
+                .daily-section h5 {
+                    margin: 0 0 4px;
+                    font-size: 14px;
+                    font-weight: 800;
+                    text-decoration: underline;
+                }
+
+                .daily-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    table-layout: fixed;
+                }
+
+                .daily-table th,
+                .daily-table td {
+                    padding: 2px 2px;
+                    font-size: 12px;
+                    font-weight: 400;
+                    vertical-align: top;
+                    white-space: nowrap;
+                }
+
+                .daily-table thead th {
+                    border-bottom: 3px solid #111111;
+                    text-align: left;
+                }
+
+                .daily-table td:not(:first-child),
+                .daily-table th:not(:first-child) {
+                    text-align: right;
+                }
+
+                .pump-table .group-total-row td:last-child {
+                    border-top: 3px solid #111111;
+                    font-weight: 800;
+                }
+
+                .pump-table .group-gap-row td {
+                    height: 10px;
+                }
+
+                .sales-table th:nth-child(5),
+                .sales-table td:nth-child(5),
+                .sales-table th:nth-child(6),
+                .sales-table td:nth-child(6) {
+                    text-align: left;
+                }
+
+                .sales-table tfoot td {
+                    border-top: 3px solid #111111;
+                    font-weight: 800;
+                }
+
+                .closing-row td:nth-last-child(2),
+                .closing-row td:last-child {
+                    color: red;
+                    font-weight: 800;
+                    font-size: 15px;
+                }
+
+                .cash-section {
+                    border-bottom-width: 2px;
+                }
+
+                .cash-section .daily-table thead th {
+                    border-bottom: 0;
+                    font-weight: 800;
+                }
+
+                .sold-label {
+                    text-align: center;
+                    font-size: 12px;
+                    font-weight: 800;
+                    margin-bottom: 2px;
+                }
+
+                .stock-table td:first-child strong {
+                    display: block;
+                    font-size: 11px;
+                    font-style: italic;
+                    white-space: normal;
+                }
+
+                .positive {
+                    color: green;
+                }
+
+                .negative {
+                    color: red;
+                }
+
                 @media (max-width: 767.98px) {
                     .report-paper {
                         padding: 24px 18px;
@@ -864,6 +1188,32 @@ const Reports = () => {
 
                     .closing-report-table {
                         font-size: 14px;
+                    }
+
+                    .daily-report-paper {
+                        padding: 24px 16px;
+                        overflow-x: auto;
+                    }
+                }
+
+                @media print {
+                    body * {
+                        visibility: hidden;
+                    }
+
+                    .daily-report-paper,
+                    .daily-report-paper * {
+                        visibility: visible;
+                    }
+
+                    .daily-report-paper {
+                        position: absolute;
+                        left: 0;
+                        top: 0;
+                        width: 100%;
+                        margin: 0;
+                        border: 0;
+                        box-shadow: none;
                     }
                 }
             `}</style>
