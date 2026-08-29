@@ -1,8 +1,11 @@
 import React, { useCallback, useEffect, useState } from "react";
 import axios from "axios";
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { useAuth } from "../context/AuthContext";
+import AnnexureBillPaper from "./AnnexureBillPaper";
 
 const API_BASE_URL = "http://localhost:4000/api";
 
@@ -84,6 +87,8 @@ const BillGeneration = () => {
     const [message, setMessage] = useState("");
     const [error, setError] = useState("");
     const [amountLoading, setAmountLoading] = useState(false);
+    const [annexure, setAnnexure] = useState(null);
+    const [annexureLoadingId, setAnnexureLoadingId] = useState(null);
 
     const [page, setPage] = useState(1);
     const [limit, setLimit] = useState(5);
@@ -524,6 +529,140 @@ const BillGeneration = () => {
         }
     };
 
+    const downloadPaper = async (selector, fileName) => {
+        const paper = document.querySelector(selector);
+        if (!paper) return;
+
+        const canvas = await html2canvas(paper, {
+            backgroundColor: "#ffffff",
+            scale: 2,
+            useCORS: true,
+        });
+        const pdf = new jsPDF("p", "mm", "a4");
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const pageHeightInCanvas = Math.floor(canvas.width * (pageHeight / pageWidth));
+        let renderedHeight = 0;
+        let pageNumber = 0;
+
+        while (renderedHeight < canvas.height) {
+            const sliceHeight = Math.min(pageHeightInCanvas, canvas.height - renderedHeight);
+            const pageCanvas = document.createElement("canvas");
+            const pageContext = pageCanvas.getContext("2d");
+
+            pageCanvas.width = canvas.width;
+            pageCanvas.height = sliceHeight;
+            pageContext.fillStyle = "#ffffff";
+            pageContext.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+            pageContext.drawImage(
+                canvas,
+                0,
+                renderedHeight,
+                canvas.width,
+                sliceHeight,
+                0,
+                0,
+                canvas.width,
+                sliceHeight
+            );
+
+            if (pageNumber > 0) {
+                pdf.addPage();
+            }
+
+            pdf.addImage(
+                pageCanvas.toDataURL("image/jpeg", 0.98),
+                "JPEG",
+                0,
+                0,
+                pageWidth,
+                (sliceHeight * pageWidth) / canvas.width
+            );
+
+            renderedHeight += sliceHeight;
+            pageNumber += 1;
+        }
+
+        pdf.save(fileName);
+    };
+
+    const printPaper = (selector, title) => {
+        const paper = document.querySelector(selector);
+        if (!paper) return;
+
+        const printWindow = window.open("", "_blank", "width=900,height=1100");
+        if (!printWindow) {
+            window.print();
+            return;
+        }
+
+        const pageStyles = Array.from(
+            document.querySelectorAll("style, link[rel='stylesheet']")
+        ).map((node) => node.outerHTML).join("");
+
+        printWindow.document.write(`
+            <!doctype html>
+            <html>
+                <head>
+                    <title>${title}</title>
+                    ${pageStyles}
+                    <style>
+                        @page { size: A4 portrait; margin: 0; }
+                        html, body {
+                            margin: 0;
+                            padding: 0;
+                            background: #ffffff;
+                        }
+                        .annexure-bill-paper {
+                            width: 210mm !important;
+                            min-height: 297mm !important;
+                            margin: 0 auto !important;
+                            padding: 12mm 26mm 12mm !important;
+                            border: 0 !important;
+                            box-shadow: none !important;
+                            box-sizing: border-box !important;
+                        }
+                    </style>
+                </head>
+                <body>${paper.outerHTML}</body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => printWindow.print(), 250);
+    };
+
+    const handleAnnexure = async (entry, mode = "view") => {
+        try {
+            setAnnexureLoadingId(entry.id);
+            setError("");
+
+            const response = await axios.get(`${API_BASE_URL}/bill/${entry.id}/annexure`, {
+                headers: authHeaders,
+            });
+
+            if (!response.data.status) {
+                setError(response.data.message || "Failed to fetch bill annexure");
+                return;
+            }
+
+            setAnnexure(response.data.data);
+
+            if (mode === "print") {
+                setTimeout(() => printPaper(".annexure-bill-paper", "annexure-bill.pdf"), 100);
+            }
+
+            if (mode === "download") {
+                setTimeout(() => downloadPaper(".annexure-bill-paper", "annexure-bill.pdf"), 100);
+            }
+        } catch (err) {
+            console.error("Bill annexure error:", err);
+            setError(err.response?.data?.message || "Failed to fetch bill annexure");
+        } finally {
+            setAnnexureLoadingId(null);
+        }
+    };
+
     const handlePageChange = (event) => {
         setPage(Math.floor(event.first / event.rows) + 1);
         setLimit(event.rows);
@@ -534,11 +673,13 @@ const BillGeneration = () => {
     };
 
     const actionBodyTemplate = (row) => {
+        const isAnnexureLoading = annexureLoadingId === row.id;
+
         return (
-            <div>
+            <div className="d-flex flex-wrap gap-1">
                 <button
                     type="button"
-                    className="btn btn-sm btn-outline-primary me-2"
+                    className="btn btn-sm btn-outline-primary"
                     onClick={() => handleEdit(row)}
                 >
                     Edit
@@ -549,6 +690,30 @@ const BillGeneration = () => {
                     onClick={() => handleDelete(row.id)}
                 >
                     Delete
+                </button>
+                <button
+                    type="button"
+                    className="btn btn-sm btn-outline-dark"
+                    onClick={() => handleAnnexure(row, "view")}
+                    disabled={isAnnexureLoading}
+                >
+                    Annexure
+                </button>
+                <button
+                    type="button"
+                    className="btn btn-sm btn-outline-secondary"
+                    onClick={() => handleAnnexure(row, "print")}
+                    disabled={isAnnexureLoading}
+                >
+                    Print
+                </button>
+                <button
+                    type="button"
+                    className="btn btn-sm btn-outline-success"
+                    onClick={() => handleAnnexure(row, "download")}
+                    disabled={isAnnexureLoading}
+                >
+                    PDF
                 </button>
             </div>
         );
@@ -674,6 +839,40 @@ const BillGeneration = () => {
                 </div>
             )}
 
+            {annexure && (
+                <div className="card shadow-sm border-0 mb-4">
+                    <div className="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <h5 className="mb-0">Annexure Preview</h5>
+                        <div>
+                            <button
+                                type="button"
+                                className="btn btn-sm btn-outline-dark me-2"
+                                onClick={() => printPaper(".annexure-bill-paper", "annexure-bill.pdf")}
+                            >
+                                Print
+                            </button>
+                            <button
+                                type="button"
+                                className="btn btn-sm btn-outline-success me-2"
+                                onClick={() => downloadPaper(".annexure-bill-paper", "annexure-bill.pdf")}
+                            >
+                                Download PDF
+                            </button>
+                            <button
+                                type="button"
+                                className="btn btn-sm btn-secondary"
+                                onClick={() => setAnnexure(null)}
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                    <div className="card-body annexure-preview-wrap">
+                        <AnnexureBillPaper annexure={annexure} />
+                    </div>
+                </div>
+            )}
+
             <div className="card shadow-sm border-0">
                 <div className="card-header bg-white p-3">
                     <div className="row align-items-center">
@@ -713,10 +912,160 @@ const BillGeneration = () => {
                         <Column field="party_name" header="Party Name" />
                         <Column field="amt" header="Amt" />
                         <Column field="type" header="Type" />
-                        <Column header="Action" body={actionBodyTemplate} style={{ width: "180px" }} />
+                        <Column header="Action" body={actionBodyTemplate} style={{ width: "320px" }} />
                     </DataTable>
                 </div>
             </div>
+
+            <style>{`
+                .annexure-preview-wrap {
+                    overflow-x: auto;
+                    background: #f3f4f6;
+                }
+
+                .annexure-bill-paper {
+                    width: min(794px, 100%);
+                    min-height: 1123px;
+                    margin: 0 auto;
+                    padding: 46px 98px;
+                    background: #ffffff;
+                    color: #000000;
+                    border: 1px solid #cfcfcf;
+                    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+                    font-family: Tahoma, Arial, Helvetica, sans-serif;
+                    font-size: 8px;
+                    line-height: 1.1;
+                }
+
+                .annexure-bill-paper h1 {
+                    margin: 0;
+                    text-align: center;
+                    font-family: Tahoma, Arial, Helvetica, sans-serif;
+                    font-size: 32px;
+                    line-height: 1;
+                    font-weight: 800;
+                    letter-spacing: 0;
+                }
+
+                .annexure-bill-paper h2 {
+                    margin: 0 0 10px;
+                    text-align: center;
+                    font-family: Tahoma, Arial, Helvetica, sans-serif;
+                    font-size: 16px;
+                    line-height: 1;
+                    font-weight: 800;
+                }
+
+                .annexure-rule {
+                    border-top: 2px solid #111111;
+                }
+
+                .annexure-bill-meta {
+                    display: flex;
+                    gap: 52px;
+                    padding: 10px 0 12px;
+                    font-family: Tahoma, Arial, Helvetica, sans-serif;
+                    font-size: 8px;
+                    line-height: 1;
+                }
+
+                .annexure-slip-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    table-layout: fixed;
+                    font-family: Tahoma, Arial, Helvetica, sans-serif;
+                    font-size: 8px;
+                    line-height: 1.05;
+                }
+
+                .annexure-slip-table th,
+                .annexure-slip-table td {
+                    padding: 4px 2px;
+                    white-space: nowrap;
+                }
+
+                .annexure-slip-table thead th {
+                    border-bottom: 2px solid #111111;
+                    font-size: 8px;
+                    text-align: left;
+                    font-weight: 800;
+                }
+
+                .annexure-slip-table th:nth-child(1),
+                .annexure-slip-table td:nth-child(1) {
+                    width: 70px;
+                }
+
+                .annexure-slip-table th:nth-child(2),
+                .annexure-slip-table td:nth-child(2) {
+                    width: 90px;
+                }
+
+                .annexure-slip-table th:nth-child(3),
+                .annexure-slip-table td:nth-child(3) {
+                    width: 80px;
+                }
+
+                .annexure-slip-table th:nth-child(5),
+                .annexure-slip-table td:nth-child(5) {
+                    width: 52px;
+                    text-align: center;
+                }
+
+                .annexure-slip-table th:nth-child(6),
+                .annexure-slip-table td:nth-child(6),
+                .annexure-slip-table th:nth-child(7),
+                .annexure-slip-table td:nth-child(7),
+                .annexure-slip-table th:nth-child(8),
+                .annexure-slip-table td:nth-child(8) {
+                    width: 78px;
+                    text-align: right;
+                }
+
+                .annexure-slip-table tbody tr:last-child td {
+                    border-bottom: 2px solid #111111;
+                }
+
+                .annexure-slip-table tfoot td {
+                    padding-top: 10px;
+                    font-size: 8px;
+                    font-weight: 800;
+                    text-align: right;
+                }
+
+                .annexure-bottom-rule {
+                    margin-top: 12px;
+                }
+
+                @media print {
+                    @page {
+                        size: A4;
+                        margin: 0;
+                    }
+
+                    body * {
+                        visibility: hidden;
+                    }
+
+                    .annexure-bill-paper,
+                    .annexure-bill-paper * {
+                        visibility: visible;
+                    }
+
+                    .annexure-bill-paper {
+                        position: absolute;
+                        left: 0;
+                        top: 0;
+                        width: 210mm;
+                        min-height: 297mm;
+                        margin: 0;
+                        padding: 12mm 26mm;
+                        border: 0;
+                        box-shadow: none;
+                        box-sizing: border-box;
+                    }
+                }
+            `}</style>
         </div>
     );
 };

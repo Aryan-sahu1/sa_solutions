@@ -198,6 +198,62 @@ const findById = async (id, userId) => {
     return rows[0] || null;
 };
 
+const findAnnexureByBillId = async (id, userId) => {
+    const bill = await findById(id, userId);
+
+    if (!bill) {
+        return null;
+    }
+
+    const sql = `
+        SELECT
+            tr.id AS tran_id,
+            tr.slip_no,
+            tr.date,
+            tr.vehicle_no,
+            vm.name AS vehicle_name,
+            td.id AS detail_id,
+            td.qty,
+            td.rate,
+            td.amt,
+            pc.name AS product_name,
+            pc.unit AS product_unit
+        FROM tran tr
+        INNER JOIN trande td
+            ON td.sid = tr.id
+            AND td.deleted_at IS NULL
+        LEFT JOIN vehicle_master vm
+            ON vm.id = tr.vehicle_no
+            AND vm.cid = tr.cid
+            AND vm.deleted_at IS NULL
+        LEFT JOIN product_category pc
+            ON pc.id = td.product_id
+            AND pc.cid = tr.cid
+            AND pc.deleted_at IS NULL
+        WHERE tr.deleted_at IS NULL
+        AND tr.cid = ?
+        AND tr.type = 'S'
+        AND tr.pid = ?
+        AND tr.vehicle_no = ?
+        AND DATE(tr.date) BETWEEN DATE(?) AND DATE(?)
+        ORDER BY DATE(tr.date), CAST(tr.slip_no AS UNSIGNED), tr.slip_no, td.id
+    `;
+
+    const [rows] = await db.query(sql, [
+        userId,
+        bill.party,
+        bill.vehicleno,
+        bill.sdate,
+        bill.edate
+    ]);
+
+    return {
+        bill,
+        rows,
+        total: rows.reduce((sum, row) => sum + Number(row.amt || 0), 0)
+    };
+};
+
 const update = async (id, body, userId) => {
     const sql = `
         UPDATE bill
@@ -251,6 +307,7 @@ const remove = async (id, userId) => {
 module.exports = {
     findNextBillNo,
     findSalesTotal,
+    findAnnexureByBillId,
     create,
     findAll,
     findById,

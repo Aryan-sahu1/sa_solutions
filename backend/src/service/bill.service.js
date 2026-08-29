@@ -181,6 +181,19 @@ const findById = async (id, userId) => {
     return data;
 };
 
+const findAnnexureByBillId = async (id, userId, customer = null) => {
+    const data = await billRepository.findAnnexureByBillId(id, userId);
+
+    if (!data) {
+        throw createError("Bill entry not found", 404);
+    }
+
+    return {
+        ...data,
+        customer
+    };
+};
+
 const update = async (id, body, userId) => {
     validatePayload(body);
 
@@ -215,6 +228,7 @@ const remove = async (id, userId) => {
 module.exports = {
     findNextBillNo,
     findSalesTotal,
+    findAnnexureByBillId,
     create,
     findAll,
     findById,

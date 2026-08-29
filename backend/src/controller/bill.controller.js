@@ -80,6 +80,24 @@ const findById = async (req, res, next) => {
     }
 };
 
+const findAnnexureByBillId = async (req, res, next) => {
+    try {
+        const data = await billService.findAnnexureByBillId(
+            req.params.id,
+            req.user.id,
+            req.customer
+        );
+
+        return res.status(200).json({
+            status: true,
+            message: "Bill annexure fetched successfully",
+            data
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 const update = async (req, res, next) => {
     try {
         const data = await billService.update(req.params.id, req.body, req.user.id);
@@ -110,6 +128,7 @@ const remove = async (req, res, next) => {
 module.exports = {
     findNextBillNo,
     findSalesTotal,
+    findAnnexureByBillId,
     create,
     findAll,
     findById,
