@@ -111,6 +111,9 @@ const findAll = async ({ userId, page = 1, limit = 10, search = "" } = {}) => {
             b.updated_at,
             b.deleted_at,
             p.name AS party_name,
+            p.address AS party_address,
+            p.phone_no AS party_phone_no,
+            p.openbal AS party_opening_balance,
             vm.name AS vehicle_name
         FROM bill b
         LEFT JOIN party p
@@ -205,6 +208,14 @@ const findAnnexureByBillId = async (id, userId) => {
         return null;
     }
 
+    const params = [userId, bill.party, bill.sdate, bill.edate];
+    let vehicleWhere = "";
+
+    if (bill.vehicleno) {
+        vehicleWhere = "AND tr.vehicle_no = ?";
+        params.push(bill.vehicleno);
+    }
+
     const sql = `
         SELECT
             tr.id AS tran_id,
@@ -234,18 +245,12 @@ const findAnnexureByBillId = async (id, userId) => {
         AND tr.cid = ?
         AND tr.type = 'S'
         AND tr.pid = ?
-        AND tr.vehicle_no = ?
         AND DATE(tr.date) BETWEEN DATE(?) AND DATE(?)
+        ${vehicleWhere}
         ORDER BY DATE(tr.date), CAST(tr.slip_no AS UNSIGNED), tr.slip_no, td.id
     `;
 
-    const [rows] = await db.query(sql, [
-        userId,
-        bill.party,
-        bill.vehicleno,
-        bill.sdate,
-        bill.edate
-    ]);
+    const [rows] = await db.query(sql, params);
 
     return {
         bill,

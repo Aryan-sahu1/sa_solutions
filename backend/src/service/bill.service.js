@@ -39,8 +39,6 @@ const normalizePayload = async (body, userId) => {
         throw createError("Selected party does not exist", 404);
     }
 
-    let selectedVehicles = [];
-
     if (body.vehicleno === "all") {
         const vehicleResult = await vehicleMasterRepository.findAll({
             userId,
@@ -49,12 +47,39 @@ const normalizePayload = async (body, userId) => {
             sid: body.party
         });
 
-        selectedVehicles = vehicleResult.data || [];
+        const selectedVehicles = vehicleResult.data || [];
 
         if (selectedVehicles.length === 0) {
             throw createError("No vehicles found for selected party", 404);
         }
-    } else {
+
+        const totalAmount = await billRepository.findSalesTotal({
+            userId,
+            party: Number(body.party),
+            sdate: String(body.sdate).trim(),
+            edate: String(body.edate).trim(),
+            vehicleno: ""
+        });
+
+        if (Number(totalAmount || 0) <= 0) {
+            throw createError("No sales amount found for selected vehicles");
+        }
+
+        return [{
+            sdate: String(body.sdate).trim(),
+            edate: String(body.edate).trim(),
+            date: String(body.date).trim(),
+            billno: String(body.billno).trim(),
+            vehicleno: null,
+            party: Number(body.party),
+            remarks: String(body.remarks || "").trim(),
+            amt: Number(totalAmount || 0).toFixed(2),
+            type: String(body.type).trim(),
+            tcs: body.tcs || 0
+        }];
+    }
+
+    {
         const vehicle = await vehicleMasterRepository.findById(body.vehicleno, userId);
 
         if (!vehicle) {
@@ -65,45 +90,19 @@ const normalizePayload = async (body, userId) => {
             throw createError("Selected vehicle does not belong to selected party");
         }
 
-        selectedVehicles = [vehicle];
-    }
-
-    const payloads = [];
-
-    for (const vehicle of selectedVehicles) {
-        const vehicleAmount = body.vehicleno === "all"
-            ? await billRepository.findSalesTotal({
-                userId,
-                party: Number(body.party),
-                sdate: String(body.sdate).trim(),
-                edate: String(body.edate).trim(),
-                vehicleno: Number(vehicle.id)
-            })
-            : body.amt;
-
-        if (body.vehicleno === "all" && Number(vehicleAmount || 0) <= 0) {
-            continue;
-        }
-
-        payloads.push({
+        return [{
             sdate: String(body.sdate).trim(),
             edate: String(body.edate).trim(),
             date: String(body.date).trim(),
-            billno: String(Number(body.billno) + payloads.length).padStart(String(body.billno).length, "0"),
+            billno: String(body.billno).trim(),
             vehicleno: Number(vehicle.id),
             party: Number(body.party),
             remarks: String(body.remarks || "").trim(),
-            amt: Number(vehicleAmount || 0).toFixed(2),
+            amt: Number(body.amt || 0).toFixed(2),
             type: String(body.type).trim(),
             tcs: body.tcs || 0
-        });
+        }];
     }
-
-    if (payloads.length === 0) {
-        throw createError("No sales amount found for selected vehicles");
-    }
-
-    return payloads;
 };
 
 const findNextBillNo = async (userId) => {
