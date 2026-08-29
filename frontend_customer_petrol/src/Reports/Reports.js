@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import axios from "axios";
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
 import pdfMake from "pdfmake/build/pdfmake";
 import pdfFonts from "pdfmake/build/vfs_fonts";
 import { useAuth } from "../context/AuthContext";
@@ -7,6 +9,10 @@ import DailyReportPaper, {
     formatDailyAmount,
     formatDailyDate,
 } from "./DailyReportPaper";
+import AccountStatementPaper, {
+    formatStatementAmount,
+    formatStatementDate,
+} from "./AccountStatementPaper";
 
 const API_BASE_URL = "http://localhost:4000/api";
 
@@ -187,6 +193,13 @@ const Reports = () => {
         return `${formatAmount(Math.abs(balance))} ${balance >= 0 ? "Dr" : "Cr"}`;
     };
 
+    const formatGroupedAmount = (value) => (
+        Number(value || 0).toLocaleString("en-IN", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        })
+    );
+
     const reportTitle = (
         customer?.firm_name ||
         customer?.company_name ||
@@ -218,6 +231,8 @@ const Reports = () => {
     const statementCredit = (row) => (
         Number(row.credit || 0) > 0 ? formatAmount(row.credit) : "-"
     );
+
+    const trialNetBalance = Number(totals?.trial_debit || 0) - Number(totals?.trial_credit || 0);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -345,41 +360,66 @@ const Reports = () => {
     };
 
     const buildAccountStatementPdfTableBody = () => {
-        const tableRows = rows.map((row, index) => [
-            String(index + 1),
-            formatDisplayDate(String(row.date || "").slice(0, 10)),
-            row.particular || "",
-            row.remarks || row.slip_no || "",
-            { text: statementDebit(row), alignment: "right" },
-            { text: statementCredit(row), alignment: "right" },
-            { text: formatBalance(row.balance), alignment: "right" },
-        ]);
+        const tableRows = rows.map((row, index) => {
+            const isCreditRow = Number(row.credit || 0) > 0;
+            const creditColor = isCreditRow ? "#00a000" : "#000000";
+
+            return [
+                String(index + 2),
+                { text: formatStatementDate(String(row.date || "").slice(0, 10)), color: creditColor, bold: isCreditRow },
+                { text: row.particular || "", color: creditColor, bold: isCreditRow },
+                { text: row.remarks || "", color: creditColor, bold: isCreditRow },
+                row.slip_no || "",
+                row.vehicle_name || row.vehicle_no || "",
+                row.item || "",
+                { text: row.qty ? formatStatementAmount(row.qty) : "", alignment: "right" },
+                { text: row.rate ? formatStatementAmount(row.rate) : "", alignment: "right" },
+                { text: statementDebit(row), alignment: "right" },
+                { text: statementCredit(row), alignment: "right", color: creditColor, bold: isCreditRow },
+                { text: formatBalance(row.balance), alignment: "right" },
+            ];
+        });
 
         return [
             [
-                { text: "Sno", bold: true },
+                { text: "Sn", bold: true },
                 { text: "Date", bold: true },
-                { text: "Particular", bold: true },
+                { text: "Particulars", bold: true },
                 { text: "Remarks", bold: true },
-                { text: "Debit", bold: true, alignment: "right" },
-                { text: "Credit", bold: true, alignment: "right" },
+                { text: "Slip No", bold: true },
+                { text: "Vehicle No", bold: true },
+                { text: "Item", bold: true },
+                { text: "Qty", bold: true, alignment: "right" },
+                { text: "Rate", bold: true, alignment: "right" },
+                { text: "Dr Amount", bold: true, alignment: "right" },
+                { text: "Cr Amount", bold: true, alignment: "right" },
                 { text: "Balance", bold: true, alignment: "right" },
             ],
             [
+                "1",
+                formatStatementDate(formData.fromDate),
+                { text: "Opening Bala", bold: true },
                 "",
                 "",
-                { text: "Opening Balance", colSpan: 2, bold: true },
                 "",
                 "",
                 "",
+                "",
+                { text: openingBalance > 0 ? formatStatementAmount(openingBalance) : "", alignment: "right" },
+                { text: openingBalance < 0 ? formatStatementAmount(Math.abs(openingBalance)) : "", alignment: "right" },
                 { text: formatBalance(openingBalance), alignment: "right", bold: true },
             ],
             ...tableRows,
             [
                 "",
                 "",
-                { text: "Total", colSpan: 2, alignment: "right", bold: true },
                 "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                { text: "Total", alignment: "right", bold: true },
                 { text: formatAmount(totals?.debit), alignment: "right", bold: true },
                 { text: formatAmount(totals?.credit), alignment: "right", bold: true },
                 { text: formatBalance(closingBalance), alignment: "right", bold: true },
@@ -390,7 +430,7 @@ const Reports = () => {
     const getPdfTable = () => (
         isAccountStatementActive
             ? {
-                widths: [25, 55, "*", 110, 65, 65, 75],
+                widths: [16, 39, 51, 61, 32, 50, 25, 35, 35, 54, 54, 61],
                 body: buildAccountStatementPdfTableBody(),
             }
             : {
@@ -402,64 +442,117 @@ const Reports = () => {
     const getPdfDefinition = () => ({
         pageSize: "A4",
         pageOrientation: "portrait",
-        pageMargins: [45, 38, 45, 38],
+        pageMargins: isAccountStatementActive ? [36, 30, 28, 28] : [36, 36, 36, 36],
         defaultStyle: {
-            fontSize: 8,
+            fontSize: isAccountStatementActive ? 6.4 : 8,
             color: "#000000",
         },
+        footer: isAccountStatementActive
+            ? (currentPage, pageCount) => ({
+                text: `Page ${currentPage} of ${pageCount}`,
+                bold: true,
+                italics: true,
+                fontSize: 8,
+                margin: [42, 0, 0, 0],
+            })
+            : undefined,
         content: [
-            {
-                columns: [
+            ...(isAccountStatementActive
+                ? [
+                    {
+                        columns: [
+                            { text: `GSTIN : ${customer?.gstno || ""}` },
+                            {
+                                stack: [
+                                    { text: `Mobile :${customer?.mobile || ""}`, alignment: "right" },
+                                    { text: "Email :", alignment: "right" },
+                                ],
+                            },
+                        ],
+                    },
                     {
                         stack: [
                             {
                                 text: String(reportTitle).toUpperCase(),
                                 bold: true,
-                                fontSize: 13,
-                                margin: [0, 0, 0, 3],
+                                fontSize: 21,
+                                alignment: "center",
+                                margin: [0, 6, 0, 3],
                             },
                             {
-                                text: dateRangeLabel,
-                                fontSize: 10,
+                                text: "Dealer : Hindustan Petroleum Corporation  Ltd.",
+                                alignment: "center",
+                                fontSize: 7.5,
                             },
+                            { text: customer?.address || "", alignment: "center", fontSize: 7, bold: true },
+                            { text: customer?.address1 || "", alignment: "center", fontSize: 7, bold: true },
                         ],
+                        margin: [0, 0, 0, 5],
                     },
+                    { canvas: [{ type: "line", x1: 0, y1: 0, x2: 523, y2: 0, lineWidth: 1 }] },
                     {
-                        stack: [
+                        columns: [
+                            { text: "Account Statement", bold: true, fontSize: 9.5 },
                             {
-                                text: "Page No. 1",
-                                alignment: "right",
-                                margin: [0, 0, 0, 8],
-                            },
-                            {
-                                text: reportHeading,
-                                alignment: "right",
+                                text: `Period From ${formatStatementDate(formData.fromDate)} To ${formatStatementDate(formData.toDate)}`,
+                                bold: true,
+                                fontSize: 8,
                             },
                         ],
+                        columnGap: 16,
+                        margin: [0, 4, 0, 2],
                     },
-                ],
-                margin: [0, 0, 0, 8],
-            },
-            ...(isAccountStatementActive
-                ? [{
-                    text: `Account: ${statementParty?.name || ""}`,
-                    bold: true,
-                    margin: [0, 0, 0, 6],
-                }]
-                : []),
+                    { text: String(statementParty?.name || "CASH IN HAND").toUpperCase(), bold: true, margin: [0, 0, 0, 6] },
+                    { text: "GSTIN :", bold: true, margin: [0, 0, 0, 58] },
+                ]
+                : [
+                    {
+                        columns: [
+                            {
+                                stack: [
+                                    {
+                                        text: String(reportTitle).toUpperCase(),
+                                        bold: true,
+                                        fontSize: 13,
+                                        margin: [0, 0, 0, 3],
+                                    },
+                                    {
+                                        text: dateRangeLabel,
+                                        fontSize: 10,
+                                    },
+                                ],
+                            },
+                            {
+                                stack: [
+                                    {
+                                        text: "Page No. 1",
+                                        alignment: "right",
+                                        margin: [0, 0, 0, 8],
+                                    },
+                                    {
+                                        text: reportHeading,
+                                        alignment: "right",
+                                    },
+                                ],
+                            },
+                        ],
+                        margin: [0, 0, 0, 8],
+                    },
+                ]),
             {
                 table: {
                     headerRows: 1,
                     ...getPdfTable(),
                 },
                 layout: {
-                    hLineWidth: () => 0.8,
-                    vLineWidth: () => 0,
+                    hLineWidth: () => (isAccountStatementActive ? 0.35 : 0.8),
+                    vLineWidth: () => (isAccountStatementActive ? 0.35 : 0),
                     hLineColor: () => "#000000",
-                    paddingLeft: () => 3,
-                    paddingRight: () => 3,
-                    paddingTop: () => 2,
-                    paddingBottom: () => 2,
+                    vLineColor: () => "#000000",
+                    paddingLeft: () => (isAccountStatementActive ? 1.5 : 3),
+                    paddingRight: () => (isAccountStatementActive ? 1.5 : 3),
+                    paddingTop: () => (isAccountStatementActive ? 1.2 : 2),
+                    paddingBottom: () => (isAccountStatementActive ? 1.2 : 2),
                 },
             },
         ],
@@ -541,7 +634,7 @@ const Reports = () => {
 
         return {
             pageSize: "A4",
-            pageMargins: [42, 28, 42, 28],
+            pageMargins: [36, 36, 36, 36],
             defaultStyle: { fontSize: 8, color: "#000000" },
             content: [
                 {
@@ -607,8 +700,139 @@ const Reports = () => {
         rows.length > 0 ||
         (isAccountStatementActive && statementParty);
 
+    const printPreviewPaper = (selector, title, printClassName) => {
+        const paper = document.querySelector(selector);
+        if (!paper) return;
+
+        const printWindow = window.open("", "_blank", "width=900,height=1100");
+        if (!printWindow) {
+            window.print();
+            return;
+        }
+
+        const pageStyles = Array.from(
+            document.querySelectorAll("style, link[rel='stylesheet']")
+        ).map((node) => node.outerHTML).join("");
+
+        printWindow.document.write(`
+            <!doctype html>
+            <html>
+                <head>
+                    <title>${title}</title>
+                    ${pageStyles}
+                    <style>
+                        @page { size: A4 portrait; margin: 0; }
+                        html, body {
+                            margin: 0;
+                            padding: 0;
+                            background: #ffffff;
+                        }
+                        ${printClassName} {
+                            width: 210mm !important;
+                            min-height: 297mm !important;
+                            margin: 0 auto !important;
+                            padding: 12.7mm 14.8mm 8mm !important;
+                            border: 0 !important;
+                            box-shadow: none !important;
+                            box-sizing: border-box !important;
+                        }
+                    </style>
+                </head>
+                <body>${paper.outerHTML}</body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => printWindow.print(), 250);
+    };
+
+    const downloadPreviewPaper = async (selector, fileName) => {
+        const paper = document.querySelector(selector);
+        if (!paper) return;
+
+        const canvas = await html2canvas(paper, {
+            backgroundColor: "#ffffff",
+            scale: 2,
+            useCORS: true,
+        });
+        const pdf = new jsPDF("p", "mm", "a4");
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const pageHeightInCanvas = Math.floor(canvas.width * (pageHeight / pageWidth));
+        let renderedHeight = 0;
+        let pageNumber = 0;
+
+        while (renderedHeight < canvas.height) {
+            const sliceHeight = Math.min(pageHeightInCanvas, canvas.height - renderedHeight);
+            const pageCanvas = document.createElement("canvas");
+            const pageContext = pageCanvas.getContext("2d");
+
+            pageCanvas.width = canvas.width;
+            pageCanvas.height = sliceHeight;
+            pageContext.fillStyle = "#ffffff";
+            pageContext.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+            pageContext.drawImage(
+                canvas,
+                0,
+                renderedHeight,
+                canvas.width,
+                sliceHeight,
+                0,
+                0,
+                canvas.width,
+                sliceHeight
+            );
+
+            if (pageNumber > 0) {
+                pdf.addPage();
+            }
+
+            const slicePdfHeight = (sliceHeight * pageWidth) / canvas.width;
+            pdf.addImage(
+                pageCanvas.toDataURL("image/jpeg", 0.98),
+                "JPEG",
+                0,
+                0,
+                pageWidth,
+                slicePdfHeight
+            );
+
+            renderedHeight += sliceHeight;
+            pageNumber += 1;
+        }
+
+        pdf.save(fileName);
+    };
+
     const handlePrintPdf = () => {
         if (!canExportPdf) return;
+        if (isAccountStatementActive) {
+            printPreviewPaper(
+                ".account-statement-paper",
+                "account-statement.pdf",
+                ".account-statement-paper"
+            );
+            return;
+        }
+
+        if (isTrialBalanceActive) {
+            printPreviewPaper(
+                ".trial-balance-paper",
+                "trial-balance.pdf",
+                ".trial-balance-paper"
+            );
+            return;
+        }
+
+        if (isDailyReportActive) {
+            printPreviewPaper(
+                ".daily-report-paper",
+                "daily-report.pdf",
+                ".daily-report-paper"
+            );
+            return;
+        }
+
         pdfMake.createPdf(
             isDailyReportActive ? buildDailyReportPdfDefinition() : getPdfDefinition()
         ).print();
@@ -616,6 +840,21 @@ const Reports = () => {
 
     const handleDownloadPdf = () => {
         if (!canExportPdf) return;
+        if (isAccountStatementActive) {
+            downloadPreviewPaper(".account-statement-paper", "account-statement.pdf");
+            return;
+        }
+
+        if (isTrialBalanceActive) {
+            downloadPreviewPaper(".trial-balance-paper", "trial-balance.pdf");
+            return;
+        }
+
+        if (isDailyReportActive) {
+            downloadPreviewPaper(".daily-report-paper", "daily-report.pdf");
+            return;
+        }
+
         const fileName = isDailyReportActive
             ? "daily-report.pdf"
             : isAccountStatementActive
@@ -778,8 +1017,21 @@ const Reports = () => {
                 />
             )}
 
-            {!isDailyReportActive && (
-            <div className="report-paper mt-4">
+            {isAccountStatementActive && statementParty && (
+                <AccountStatementPaper
+                    closingBalance={closingBalance}
+                    customer={customer}
+                    fromDate={formData.fromDate}
+                    openingBalance={openingBalance}
+                    party={statementParty}
+                    reportTitle={reportTitle}
+                    rows={rows}
+                    toDate={formData.toDate}
+                />
+            )}
+
+            {!isDailyReportActive && !isAccountStatementActive && (
+            <div className="report-paper trial-balance-paper mt-4">
                 <div className="report-heading">
                     <div>
                         <h4>{String(reportTitle).toUpperCase()}</h4>
@@ -854,94 +1106,12 @@ const Reports = () => {
                         </table>
                     )}
 
-                    {isAccountStatementActive && (
-                        <table className="closing-report-table statement-report-table">
-                            <thead>
-                                <tr>
-                                    <th className="sno-col">Sno</th>
-                                    <th className="date-col">Date</th>
-                                    <th>Particular</th>
-                                    <th>Remarks</th>
-                                    <th className="amount-col">Debit</th>
-                                    <th className="amount-col">Credit</th>
-                                    <th className="balance-col">Balance</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {reportLoading && (
-                                    <tr>
-                                        <td colSpan="7" className="text-center py-3">
-                                            Loading...
-                                        </td>
-                                    </tr>
-                                )}
-
-                                {!reportLoading && !statementParty && (
-                                    <tr>
-                                        <td colSpan="7" className="text-center py-3">
-                                            Select party and view account statement
-                                        </td>
-                                    </tr>
-                                )}
-
-                                {!reportLoading && statementParty && (
-                                    <tr>
-                                        <td />
-                                        <td />
-                                        <td colSpan="2" className="fw-bold">
-                                            Opening Balance
-                                        </td>
-                                        <td />
-                                        <td />
-                                        <td className="amount-cell fw-bold">
-                                            {formatBalance(openingBalance)}
-                                        </td>
-                                    </tr>
-                                )}
-
-                                {!reportLoading && rows.map((row, index) => (
-                                    <tr key={row.id}>
-                                        <td>{index + 1}</td>
-                                        <td>
-                                            {formatDisplayDate(
-                                                String(row.date || "").slice(0, 10)
-                                            )}
-                                        </td>
-                                        <td>{row.particular || ""}</td>
-                                        <td>{row.remarks || row.slip_no || ""}</td>
-                                        <td className="amount-cell">
-                                            {statementDebit(row)}
-                                        </td>
-                                        <td className="amount-cell">
-                                            {statementCredit(row)}
-                                        </td>
-                                        <td className="amount-cell">
-                                            {formatBalance(row.balance)}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                            {statementParty && (
-                                <tfoot>
-                                    <tr>
-                                        <td />
-                                        <td />
-                                        <td colSpan="2" className="text-end">Total</td>
-                                        <td className="amount-cell">
-                                            {formatAmount(totals?.debit)}
-                                        </td>
-                                        <td className="amount-cell">
-                                            {formatAmount(totals?.credit)}
-                                        </td>
-                                        <td className="amount-cell">
-                                            {formatBalance(closingBalance)}
-                                        </td>
-                                    </tr>
-                                </tfoot>
-                            )}
-                        </table>
-                    )}
                 </div>
+                {rows.length > 0 && (
+                    <div className="trial-net-balance">
+                        {formatGroupedAmount(Math.abs(trialNetBalance))}
+                    </div>
+                )}
             </div>
             )}
 
@@ -958,12 +1128,15 @@ const Reports = () => {
                 }
 
                 .report-paper {
-                    width: min(1080px, 100%);
+                    width: min(794px, 100%);
+                    min-height: 1123px;
                     margin: 0 auto;
-                    padding: 42px 56px;
+                    padding: 48px;
                     background: #ffffff;
                     color: #000000;
                     box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+                    font-family: Tahoma, Arial, Helvetica, sans-serif;
+                    font-size: 8px;
                 }
 
                 .report-heading {
@@ -989,6 +1162,39 @@ const Reports = () => {
                     text-align: right;
                 }
 
+                .trial-balance-paper {
+                    padding: 42px 64px 48px;
+                    border: 1px solid #cfcfcf;
+                    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+                    font-family: Tahoma, Arial, Helvetica, sans-serif;
+                    font-size: 8px;
+                    line-height: 1.08;
+                }
+
+                .trial-balance-paper .report-heading {
+                    margin-bottom: 4px;
+                    font-size: 8px;
+                    line-height: 1.15;
+                }
+
+                .trial-balance-paper .report-heading h4 {
+                    margin: 0 0 8px;
+                    font-size: 18px;
+                    line-height: 1;
+                    font-weight: 800;
+                }
+
+                .trial-balance-paper .report-heading-right {
+                    min-width: 150px;
+                    padding-top: 4px;
+                    font-size: 8px;
+                    line-height: 1.55;
+                }
+
+                .trial-balance-paper .table-responsive {
+                    overflow: visible;
+                }
+
                 .statement-party {
                     margin-bottom: 8px;
                     font-size: 15px;
@@ -1002,6 +1208,13 @@ const Reports = () => {
                     line-height: 1.2;
                 }
 
+                .trial-balance-paper .closing-report-table {
+                    font-size: 8px;
+                    line-height: 1.08;
+                    table-layout: fixed;
+                    margin-top: 2px;
+                }
+
                 .closing-report-table th,
                 .closing-report-table td {
                     padding: 2px 6px;
@@ -1011,17 +1224,45 @@ const Reports = () => {
                     white-space: nowrap;
                 }
 
+                .trial-balance-paper .closing-report-table th,
+                .trial-balance-paper .closing-report-table td {
+                    padding: 2px 4px;
+                    border-top: 1px solid #111111;
+                    border-bottom: 1px solid #111111;
+                    font-size: 8px;
+                    line-height: 1.05;
+                }
+
                 .closing-report-table th {
                     font-weight: 700;
                     text-align: left;
+                }
+
+                .trial-balance-paper .closing-report-table th {
+                    font-weight: 700;
                 }
 
                 .closing-report-table tfoot td {
                     font-weight: 700;
                 }
 
+                .trial-balance-paper .closing-report-table tfoot td {
+                    border-top: 2px solid #111111;
+                    border-bottom: 1px solid #111111;
+                    font-weight: 400;
+                }
+
+                .trial-balance-paper .closing-report-table tfoot .amount-cell,
+                .trial-balance-paper .closing-report-table tfoot .text-end {
+                    font-weight: 700;
+                }
+
                 .sno-col {
                     width: 48px;
+                }
+
+                .trial-balance-paper .sno-col {
+                    width: 32px;
                 }
 
                 .date-col {
@@ -1032,9 +1273,18 @@ const Reports = () => {
                     width: 230px;
                 }
 
+                .trial-balance-paper .phone-col {
+                    width: 210px;
+                    text-align: center !important;
+                }
+
                 .amount-col {
                     width: 150px;
                     text-align: right !important;
+                }
+
+                .trial-balance-paper .amount-col {
+                    width: 110px;
                 }
 
                 .balance-col {
@@ -1046,20 +1296,220 @@ const Reports = () => {
                     text-align: right;
                 }
 
+                .trial-net-balance {
+                    margin-top: 6px;
+                    padding-right: 6px;
+                    text-align: right;
+                    font-size: 8px;
+                    line-height: 1.1;
+                }
+
                 .statement-report-table {
                     min-width: 920px;
                 }
 
-                .daily-report-paper {
-                    width: min(864px, 100%);
+                .account-statement-paper {
+                    width: min(794px, 100%);
+                    min-height: 1123px;
                     margin: 24px auto 0;
-                    padding: 34px 52px 50px;
+                    padding: 36px 56px 28px;
                     background: #ffffff;
                     color: #000000;
                     border: 1px solid #cfcfcf;
-                    font-family: Arial, Helvetica, sans-serif;
-                    font-size: 12px;
-                    line-height: 1.2;
+                    font-family: Tahoma, Arial, Helvetica, sans-serif;
+                    font-size: 8px;
+                    line-height: 1.08;
+                }
+
+                .statement-company-meta {
+                    display: flex;
+                    justify-content: space-between;
+                    gap: 24px;
+                    margin-bottom: 8px;
+                    font-size: 8px;
+                    font-weight: 700;
+                }
+
+                .statement-company-header {
+                    text-align: center;
+                    margin-bottom: 6px;
+                }
+
+                .statement-company-header h2 {
+                    margin: 0 0 6px;
+                    font-size: 31px;
+                    line-height: 1;
+                    font-weight: 800;
+                    letter-spacing: 0;
+                }
+
+                .statement-company-header div {
+                    font-size: 10px;
+                    line-height: 1.05;
+                }
+
+                .statement-rule {
+                    border-top: 1px solid #111111;
+                    margin: 6px 0 4px;
+                }
+
+                .statement-title-row {
+                    display: grid;
+                    grid-template-columns: 172px 1fr;
+                    align-items: center;
+                    gap: 12px;
+                    margin-bottom: 5px;
+                }
+
+                .statement-title-row h3 {
+                    margin: 0;
+                    font-size: 13px;
+                    font-weight: 800;
+                }
+
+                .statement-title-row h4 {
+                    margin: 0;
+                    font-size: 11px;
+                    font-weight: 800;
+                }
+
+                .statement-party-info {
+                    display: grid;
+                    gap: 10px;
+                    margin: 3px 0 44px 0;
+                    font-size: 9px;
+                }
+
+                .statement-ledger-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    table-layout: fixed;
+                    border-left: 1px solid #111111;
+                    border-right: 1px solid #111111;
+                }
+
+                .statement-ledger-table th,
+                .statement-ledger-table td {
+                    padding: 2px 2px;
+                    border-left: 1px solid #111111;
+                    border-right: 1px solid #111111;
+                    border-bottom: 1px solid #b9b9b9;
+                    font-size: 8px;
+                    font-weight: 400;
+                    vertical-align: top;
+                    overflow-wrap: anywhere;
+                }
+
+                .statement-ledger-table thead th {
+                    border-top: 1px solid #111111;
+                    border-bottom: 1px solid #111111;
+                    text-align: left;
+                }
+
+                .statement-ledger-table th:nth-child(1),
+                .statement-ledger-table td:nth-child(1) {
+                    width: 18px;
+                    text-align: right;
+                }
+
+                .statement-ledger-table th:nth-child(2),
+                .statement-ledger-table td:nth-child(2) {
+                    width: 48px;
+                }
+
+                .statement-ledger-table th:nth-child(3),
+                .statement-ledger-table td:nth-child(3) {
+                    width: 62px;
+                }
+
+                .statement-ledger-table th:nth-child(4),
+                .statement-ledger-table td:nth-child(4) {
+                    width: 76px;
+                }
+
+                .statement-ledger-table th:nth-child(5),
+                .statement-ledger-table td:nth-child(5) {
+                    width: 34px;
+                }
+
+                .statement-ledger-table th:nth-child(6),
+                .statement-ledger-table td:nth-child(6) {
+                    width: 54px;
+                }
+
+                .statement-ledger-table th:nth-child(7),
+                .statement-ledger-table td:nth-child(7) {
+                    width: 28px;
+                }
+
+                .statement-ledger-table th:nth-child(8),
+                .statement-ledger-table td:nth-child(8) {
+                    width: 40px;
+                    text-align: right;
+                }
+
+                .statement-ledger-table th:nth-child(9),
+                .statement-ledger-table td:nth-child(9) {
+                    width: 40px;
+                    text-align: right;
+                }
+
+                .statement-ledger-table th:nth-child(10),
+                .statement-ledger-table td:nth-child(10) {
+                    width: 62px;
+                    text-align: right;
+                }
+
+                .statement-ledger-table th:nth-child(11),
+                .statement-ledger-table td:nth-child(11) {
+                    width: 62px;
+                    text-align: right;
+                }
+
+                .statement-ledger-table th:nth-child(12),
+                .statement-ledger-table td:nth-child(12) {
+                    width: 72px;
+                    text-align: right;
+                }
+
+                .statement-ledger-table tfoot td {
+                    border-top: 1px solid #111111;
+                    border-bottom: 1px solid #111111;
+                    font-weight: 800;
+                }
+
+                .statement-credit-row td:nth-child(2),
+                .statement-credit-row td:nth-child(3),
+                .statement-credit-row td:nth-child(4),
+                .statement-credit-row td:nth-child(11),
+                .credit-value {
+                    color: #00a000;
+                    font-weight: 700;
+                }
+
+                .statement-empty-row {
+                    text-align: center !important;
+                    padding: 16px;
+                }
+
+                .statement-page-footer {
+                    margin-top: 8px;
+                    font-size: 10px;
+                    font-style: italic;
+                    font-weight: 800;
+                }
+
+                .daily-report-paper {
+                    width: min(794px, 100%);
+                    min-height: 1123px;
+                    margin: 24px auto 0;
+                    padding: 44px 52px 42px;
+                    background: #ffffff;
+                    color: #000000;
+                    border: 1px solid #cfcfcf;
+                    font-family: Tahoma, Arial, Helvetica, sans-serif;
+                    font-size: 8px;
+                    line-height: 1.1;
                 }
 
                 .daily-title-row {
@@ -1068,12 +1518,13 @@ const Reports = () => {
                     align-items: start;
                     gap: 24px;
                     border-bottom: 3px solid #111111;
-                    padding-bottom: 6px;
+                    padding-bottom: 8px;
                 }
 
                 .daily-title-row h3 {
                     margin: 0;
-                    font-size: 22px;
+                    font-size: 24px;
+                    line-height: 1;
                     font-weight: 800;
                     letter-spacing: 0;
                 }
@@ -1081,18 +1532,22 @@ const Reports = () => {
                 .daily-title-row h4 {
                     margin: 0;
                     font-size: 15px;
+                    line-height: 1.1;
                     font-weight: 800;
                 }
 
                 .daily-section {
                     margin-top: 4px;
                     border-bottom: 3px solid #111111;
-                    padding-bottom: 4px;
+                    padding-bottom: 6px;
                 }
 
                 .daily-section h5 {
-                    margin: 0 0 4px;
-                    font-size: 14px;
+                    margin: 0 0 7px;
+                    padding-top: 2px;
+                    border-bottom: 2px solid #111111;
+                    font-size: 16px;
+                    line-height: 1.05;
                     font-weight: 800;
                     text-decoration: underline;
                 }
@@ -1106,10 +1561,11 @@ const Reports = () => {
                 .daily-table th,
                 .daily-table td {
                     padding: 2px 2px;
-                    font-size: 12px;
+                    font-size: 8px;
                     font-weight: 400;
                     vertical-align: top;
                     white-space: nowrap;
+                    line-height: 1.08;
                 }
 
                 .daily-table thead th {
@@ -1124,11 +1580,18 @@ const Reports = () => {
 
                 .pump-table .group-total-row td:last-child {
                     border-top: 3px solid #111111;
+                    border-bottom: 3px solid #111111;
                     font-weight: 800;
                 }
 
                 .pump-table .group-gap-row td {
-                    height: 10px;
+                    height: 16px;
+                }
+
+                .pump-table th:first-child,
+                .pump-table td:first-child {
+                    width: 42%;
+                    text-align: left;
                 }
 
                 .sales-table th:nth-child(5),
@@ -1136,6 +1599,50 @@ const Reports = () => {
                 .sales-table th:nth-child(6),
                 .sales-table td:nth-child(6) {
                     text-align: left;
+                }
+
+                .sales-table th:nth-child(1),
+                .sales-table td:nth-child(1) {
+                    width: 18%;
+                    text-align: left;
+                }
+
+                .sales-table th:nth-child(2),
+                .sales-table td:nth-child(2),
+                .sales-table th:nth-child(3),
+                .sales-table td:nth-child(3) {
+                    width: 8%;
+                }
+
+                .sales-table th:nth-child(4),
+                .sales-table td:nth-child(4) {
+                    width: 12%;
+                }
+
+                .sales-table th:nth-child(5),
+                .sales-table td:nth-child(5) {
+                    width: 18%;
+                    white-space: normal;
+                    overflow-wrap: anywhere;
+                }
+
+                .sales-table th:nth-child(6),
+                .sales-table td:nth-child(6) {
+                    width: 14%;
+                    white-space: normal;
+                    overflow-wrap: anywhere;
+                }
+
+                .sales-table th:nth-child(7),
+                .sales-table td:nth-child(7) {
+                    width: 13%;
+                    white-space: normal;
+                    overflow-wrap: anywhere;
+                }
+
+                .sales-table th:nth-child(8),
+                .sales-table td:nth-child(8) {
+                    width: 9%;
                 }
 
                 .sales-table tfoot td {
@@ -1150,8 +1657,21 @@ const Reports = () => {
                     font-size: 15px;
                 }
 
+                .closing-row td:nth-last-child(2) {
+                    padding-right: 34px;
+                    text-align: right !important;
+                    white-space: nowrap;
+                }
+
                 .cash-section {
                     border-bottom-width: 2px;
+                }
+
+                .cash-section h5 {
+                    border-bottom: 0;
+                    text-decoration: none;
+                    font-size: 13px;
+                    margin-bottom: 8px;
                 }
 
                 .cash-section .daily-table thead th {
@@ -1161,14 +1681,14 @@ const Reports = () => {
 
                 .sold-label {
                     text-align: center;
-                    font-size: 12px;
+                    font-size: 8px;
                     font-weight: 800;
-                    margin-bottom: 2px;
+                    margin: -4px 0 6px;
                 }
 
                 .stock-table td:first-child strong {
                     display: block;
-                    font-size: 11px;
+                    font-size: 8px;
                     font-style: italic;
                     white-space: normal;
                 }
@@ -1197,12 +1717,19 @@ const Reports = () => {
                 }
 
                 @media print {
+                    @page {
+                        size: A4;
+                        margin: 0;
+                    }
+
                     body * {
                         visibility: hidden;
                     }
 
                     .daily-report-paper,
-                    .daily-report-paper * {
+                    .daily-report-paper *,
+                    .account-statement-paper,
+                    .account-statement-paper * {
                         visibility: visible;
                     }
 
@@ -1211,9 +1738,24 @@ const Reports = () => {
                         left: 0;
                         top: 0;
                         width: 100%;
+                        min-height: auto;
                         margin: 0;
+                        padding: 0;
                         border: 0;
                         box-shadow: none;
+                    }
+
+                    .account-statement-paper {
+                        position: absolute;
+                        left: 0;
+                        top: 0;
+                        width: 210mm;
+                        min-height: 297mm;
+                        margin: 0 auto;
+                        padding: 12.7mm 14.8mm 8mm;
+                        border: 0;
+                        box-shadow: none;
+                        box-sizing: border-box;
                     }
                 }
             `}</style>

@@ -138,8 +138,7 @@ const DailyReportPaper = ({ report, reportTitle }) => {
                             );
                         })}
                         <tr className="closing-row">
-                            <td colSpan="6" />
-                            <td>Closing Balance</td>
+                            <td colSpan="7">Closing Balance</td>
                             <td>{formatDailyAmount(closingCash)}</td>
                         </tr>
                     </tbody>

@@ -9,6 +9,7 @@ const findOpeningBalance = async ({ userId, partyId, fromDate }) => {
                 p.id AS party_id,
                 p.name AS party_name,
                 p.phone_no,
+                p.address,
                 p.openbal,
                 COALESCE(SUM(
                     CASE
@@ -52,6 +53,7 @@ const findOpeningBalance = async ({ userId, partyId, fromDate }) => {
         party_id: party.party_id,
         party_name: party.party_name,
         phone_no: party.phone_no,
+        address: party.address,
         opening_balance: openingBalance
     };
 };
@@ -69,9 +71,34 @@ const findTransactions = async ({ userId, partyId, fromDate, toDate }) => {
                 tr.pid,
                 tr.crid,
                 tr.slip_no,
+                tr.vehicle_no,
+                td.id AS detail_id,
+                td.product_id,
+                td.iid,
+                td.qty,
+                td.rate,
+                td.amt AS detail_amt,
+                pc.name AS product_name,
+                si.name AS item_name,
+                vm.name AS vehicle_name,
                 debit_party.name AS debit_party_name,
                 credit_party.name AS credit_party_name
             FROM tran tr
+            LEFT JOIN trande td
+                ON td.sid = tr.id
+                AND td.deleted_at IS NULL
+            LEFT JOIN product_category pc
+                ON pc.id = td.product_id
+                AND pc.cid = tr.cid
+                AND pc.deleted_at IS NULL
+            LEFT JOIN stock_item si
+                ON si.id = td.iid
+                AND si.cid = tr.cid
+                AND si.deleted_at IS NULL
+            LEFT JOIN vehicle_master vm
+                ON vm.id = tr.vehicle_no
+                AND vm.cid = tr.cid
+                AND vm.deleted_at IS NULL
             LEFT JOIN party debit_party
                 ON debit_party.id = tr.pid
                 AND debit_party.cid = tr.cid
@@ -85,7 +112,7 @@ const findTransactions = async ({ userId, partyId, fromDate, toDate }) => {
             AND DATE(tr.date) >= ?
             AND DATE(tr.date) <= ?
             AND (tr.pid = ? OR tr.crid = ?)
-            ORDER BY tr.date ASC, tr.id ASC
+            ORDER BY tr.date ASC, tr.id ASC, td.id ASC
         `,
         [userId, fromDate, toDate, partyId, partyId]
     );
@@ -115,8 +142,11 @@ const findAll = async ({ userId, partyId, fromDate, toDate }) => {
 
     const data = transactions.map((transaction) => {
         const isDebit = Number(transaction.pid) === Number(partyId);
-        const debit = isDebit ? toNumber(transaction.amt) : 0;
-        const credit = isDebit ? 0 : toNumber(transaction.amt);
+        const amount = transaction.detail_id
+            ? toNumber(transaction.detail_amt)
+            : toNumber(transaction.amt);
+        const debit = isDebit ? amount : 0;
+        const credit = isDebit ? 0 : amount;
 
         runningBalance = runningBalance + debit - credit;
 
@@ -126,6 +156,11 @@ const findAll = async ({ userId, partyId, fromDate, toDate }) => {
             type: transaction.type,
             type1: transaction.type1,
             slip_no: transaction.slip_no,
+            vehicle_no: transaction.vehicle_no,
+            vehicle_name: transaction.vehicle_name,
+            item: transaction.product_name || transaction.item_name,
+            qty: transaction.qty,
+            rate: transaction.rate,
             remarks: transaction.remarks,
             particular: isDebit
                 ? transaction.credit_party_name
@@ -149,7 +184,8 @@ const findAll = async ({ userId, partyId, fromDate, toDate }) => {
         party: {
             id: opening.party_id,
             name: opening.party_name,
-            phone_no: opening.phone_no
+            phone_no: opening.phone_no,
+            address: opening.address
         },
         opening_balance: opening.opening_balance,
         closing_balance: runningBalance,
