@@ -7,6 +7,7 @@ import { Column } from "primereact/column";
 import { useAuth } from "../context/AuthContext";
 import AnnexureBillPaper from "./AnnexureBillPaper";
 import BillSupplyPaper from "./BillSupplyPaper";
+import OilLubBillPaper from "./OilLubBillPaper";
 
 const API_BASE_URL = "http://localhost:4000/api";
 
@@ -683,17 +684,21 @@ const BillGeneration = () => {
             setBillPreview(response.data.data);
             setAnnexure(null);
 
+            const isLubBill = response.data.data?.bill?.type === "Lub";
+            const billSelector = isLubBill ? ".oil-lub-bill-paper" : ".bill-supply-paper";
+            const billFileName = isLubBill ? "oil-lub-bill.pdf" : "vehicle-wise-bill.pdf";
+
             if (mode === "print") {
                 setTimeout(() => printPaper(
-                    ".bill-supply-paper",
-                    "vehicle-wise-bill.pdf",
-                    ".bill-supply-paper",
+                    billSelector,
+                    billFileName,
+                    billSelector,
                     "6mm 10mm"
                 ), 100);
             }
 
             if (mode === "download") {
-                setTimeout(() => downloadPaper(".bill-supply-paper", "vehicle-wise-bill.pdf"), 100);
+                setTimeout(() => downloadPaper(billSelector, billFileName), 100);
             }
         } catch (err) {
             console.error("Bill preview error:", err);
@@ -916,9 +921,9 @@ const BillGeneration = () => {
                                 type="button"
                                 className="btn btn-sm btn-outline-dark me-2"
                                 onClick={() => printPaper(
-                                    ".bill-supply-paper",
-                                    "vehicle-wise-bill.pdf",
-                                    ".bill-supply-paper",
+                                    billPreview?.bill?.type === "Lub" ? ".oil-lub-bill-paper" : ".bill-supply-paper",
+                                    billPreview?.bill?.type === "Lub" ? "oil-lub-bill.pdf" : "vehicle-wise-bill.pdf",
+                                    billPreview?.bill?.type === "Lub" ? ".oil-lub-bill-paper" : ".bill-supply-paper",
                                     "6mm 10mm"
                                 )}
                             >
@@ -927,7 +932,10 @@ const BillGeneration = () => {
                             <button
                                 type="button"
                                 className="btn btn-sm btn-outline-success me-2"
-                                onClick={() => downloadPaper(".bill-supply-paper", "vehicle-wise-bill.pdf")}
+                                onClick={() => downloadPaper(
+                                    billPreview?.bill?.type === "Lub" ? ".oil-lub-bill-paper" : ".bill-supply-paper",
+                                    billPreview?.bill?.type === "Lub" ? "oil-lub-bill.pdf" : "vehicle-wise-bill.pdf"
+                                )}
                             >
                                 Download PDF
                             </button>
@@ -941,7 +949,11 @@ const BillGeneration = () => {
                         </div>
                     </div>
                     <div className="card-body annexure-preview-wrap">
-                        <BillSupplyPaper annexure={billPreview} />
+                        {billPreview?.bill?.type === "Lub" ? (
+                            <OilLubBillPaper annexure={billPreview} />
+                        ) : (
+                            <BillSupplyPaper annexure={billPreview} />
+                        )}
                     </div>
                 </div>
             )}
@@ -1255,6 +1267,201 @@ const BillGeneration = () => {
                     text-align: right;
                 }
 
+                .oil-lub-bill-paper {
+                    width: min(794px, 100%);
+                    min-height: 1123px;
+                    margin: 0 auto;
+                    padding: 22px 40px;
+                    background: #ffffff;
+                    color: #000000;
+                    border: 1px solid #cfcfcf;
+                    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+                    font-family: Tahoma, Arial, Helvetica, sans-serif;
+                    font-size: 8px;
+                    line-height: 1.1;
+                }
+
+                .oil-bill-border {
+                    min-height: 704px;
+                    border: 2px solid #111111;
+                    padding: 8px 6px 0;
+                }
+
+                .oil-invoice-top {
+                    display: grid;
+                    grid-template-columns: 1fr auto 1fr;
+                    align-items: center;
+                    font-size: 8px;
+                    font-weight: 800;
+                    line-height: 1;
+                }
+
+                .oil-invoice-top strong:last-child {
+                    text-align: right;
+                }
+
+                .oil-company-meta {
+                    display: flex;
+                    justify-content: space-between;
+                    margin-top: 9px;
+                    font-size: 8px;
+                    font-weight: 800;
+                }
+
+                .oil-company {
+                    text-align: center;
+                    margin-top: 0;
+                }
+
+                .oil-company h1 {
+                    margin: 0;
+                    font-size: 28px;
+                    line-height: 1;
+                    font-weight: 800;
+                    letter-spacing: 0;
+                }
+
+                .oil-company h2 {
+                    margin: 15px 0 54px;
+                    font-size: 8px;
+                    line-height: 1;
+                    font-weight: 800;
+                }
+
+                .oil-dealer {
+                    margin: 0 -6px;
+                    padding: 3px 8px;
+                    border-top: 1px solid #111111;
+                    border-bottom: 1px solid #111111;
+                    text-align: center;
+                    font-size: 8px;
+                    font-weight: 800;
+                }
+
+                .oil-info-row {
+                    display: grid;
+                    grid-template-columns: 1.45fr 1fr;
+                    margin: 0 -6px;
+                    border-bottom: 1px solid #111111;
+                    font-size: 8px;
+                    line-height: 1.35;
+                }
+
+                .oil-info-row > div {
+                    min-height: 74px;
+                    padding: 4px 6px;
+                }
+
+                .oil-party-name {
+                    font-weight: 800;
+                }
+
+                .oil-info-row > div:first-child {
+                    border-right: 1px solid #111111;
+                }
+
+                .oil-info-row > div:last-child div {
+                    display: grid;
+                    grid-template-columns: 72px 1fr;
+                    gap: 6px;
+                    margin-bottom: 2px;
+                }
+
+                .oil-lub-table {
+                    width: calc(100% + 12px);
+                    margin: 0 -6px;
+                    border-collapse: collapse;
+                    table-layout: fixed;
+                    font-size: 8px;
+                    line-height: 1.1;
+                }
+
+                .oil-lub-table th,
+                .oil-lub-table td {
+                    padding: 3px 4px;
+                    border-left: 1px solid #111111;
+                    border-right: 1px solid #111111;
+                    vertical-align: top;
+                }
+
+                .oil-lub-table th {
+                    border-bottom: 1px solid #111111;
+                    text-align: center;
+                    font-weight: 800;
+                }
+
+                .oil-lub-table th:nth-child(1),
+                .oil-lub-table td:nth-child(1) {
+                    width: 48px;
+                    text-align: left;
+                }
+
+                .oil-lub-table th:nth-child(2),
+                .oil-lub-table td:nth-child(2) {
+                    width: 126px;
+                    text-align: left;
+                }
+
+                .oil-lub-table th:nth-child(3),
+                .oil-lub-table td:nth-child(3) {
+                    width: 70px;
+                    text-align: center;
+                }
+
+                .oil-lub-table th:nth-child(4),
+                .oil-lub-table td:nth-child(4) {
+                    width: 54px;
+                    text-align: center;
+                }
+
+                .oil-lub-table th:nth-child(5),
+                .oil-lub-table td:nth-child(5) {
+                    width: 58px;
+                    text-align: center;
+                }
+
+                .oil-lub-table th:nth-child(6),
+                .oil-lub-table td:nth-child(6) {
+                    width: 68px;
+                    text-align: center;
+                }
+
+                .oil-lub-table th:nth-child(7),
+                .oil-lub-table td:nth-child(7),
+                .oil-lub-table th:nth-child(8),
+                .oil-lub-table td:nth-child(8),
+                .oil-lub-table th:nth-child(9),
+                .oil-lub-table td:nth-child(9) {
+                    width: 70px;
+                    text-align: right;
+                }
+
+                .oil-lub-table .oil-filler-row td {
+                    height: 384px;
+                    border-bottom: 1px solid #111111;
+                }
+
+                .oil-lub-table tfoot td {
+                    padding: 3px 4px;
+                    font-weight: 800;
+                }
+
+                .oil-lub-table tfoot tr:first-child td {
+                    border-top: 1px solid #111111;
+                }
+
+                .oil-lub-table tfoot tr:last-child td {
+                    border-bottom: 1px solid #111111;
+                }
+
+                .oil-signature {
+                    margin-top: 8px;
+                    padding-right: 28px;
+                    text-align: right;
+                    font-size: 8px;
+                    font-weight: 800;
+                }
+
                 .annexure-bill-paper {
                     width: min(794px, 100%);
                     min-height: 1123px;
@@ -1382,7 +1589,9 @@ const BillGeneration = () => {
                     .annexure-bill-paper,
                     .annexure-bill-paper *,
                     .bill-supply-paper,
-                    .bill-supply-paper * {
+                    .bill-supply-paper *,
+                    .oil-lub-bill-paper,
+                    .oil-lub-bill-paper * {
                         visibility: visible;
                     }
 
@@ -1405,6 +1614,19 @@ const BillGeneration = () => {
                     }
 
                     .bill-supply-paper {
+                        position: absolute;
+                        left: 0;
+                        top: 0;
+                        width: 210mm;
+                        min-height: 297mm;
+                        margin: 0;
+                        padding: 6mm 10mm;
+                        border: 0;
+                        box-shadow: none;
+                        box-sizing: border-box;
+                    }
+
+                    .oil-lub-bill-paper {
                         position: absolute;
                         left: 0;
                         top: 0;
