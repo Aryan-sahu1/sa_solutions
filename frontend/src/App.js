@@ -16,6 +16,7 @@ import Product from "./component/Product";
 import THeadMaster from "./component/THeadMaster";
 import MasterList from "./component/MasterList";
 import Master from "./component/Master";
+import ImportData from "./component/ImportData";
  
 const App = () => {
     return (
@@ -67,6 +68,10 @@ const App = () => {
                       <Route
                         path="/master-list"
                         element={<MasterList />}
+                    />
+                    <Route
+                        path="/import-data"
+                        element={<ImportData />}
                     />
                 </Route>
 

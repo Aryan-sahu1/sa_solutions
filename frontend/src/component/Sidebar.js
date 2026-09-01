@@ -10,6 +10,7 @@ import {
     FaBars,
     FaTimes,
     FaLayerGroup,
+    FaFileImport,
 } from "react-icons/fa";
 
 const menuItems = [
@@ -19,6 +20,7 @@ const menuItems = [
     { to: "/masters", label: "Master", icon: <FaUserTie /> },
     { to: "/customers", label: "Create Customer", icon: <FaUsers /> },
     { to: "/master-list", label: "Master List", icon: <FaUsers /> },
+    { to: "/import-data", label: "Import Data", icon: <FaFileImport /> },
     { to: "/change-password", label: "Change Password", icon: <FaKey /> },
 ];
 

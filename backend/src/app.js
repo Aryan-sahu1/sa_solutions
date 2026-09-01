@@ -24,6 +24,7 @@ const leakRoutes = require("./routes/leak.routes");
 const nozelRoutes = require("./routes/nozel.routes");
 const meterRoutes = require("./routes/meter.routes");
 const reportsRoutes = require("./routes/reports.routes");
+const importRoutes = require("./routes/import.routes");
 const customerRoutes =
     require("./routes/customer.routes");
 const errorHandler = require("./middleware/errorHandler");
@@ -54,6 +55,7 @@ app.use("/api/leak", leakRoutes);
 app.use("/api/nozel", nozelRoutes);
 app.use("/api/meter", meterRoutes);
 app.use("/api/reports", reportsRoutes);
+app.use("/api/import", importRoutes);
 app.use("/api/customers", customerRoutes);
 app.use("/api/master-list", masterListRoutes);
 
