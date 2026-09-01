@@ -42,6 +42,7 @@ const BillSupplyPaper = ({ annexure }) => {
     const totalDue = currentBill + tcs;
     const totalQty = rows.reduce((sum, row) => sum + toNumber(row.qty), 0);
     const vehicleLabel = getVehicleLabel(bill, rows);
+    const dealer = customer?.dealer || "Hindustan Petroleum Corporation Ltd.";
 
     return (
         <div className="bill-supply-paper">
@@ -57,7 +58,7 @@ const BillSupplyPaper = ({ annexure }) => {
                 </div>
 
                 <div className="bill-dealer">
-                    Dealer : Hindustan Petroleum Corporation Ltd.
+                    Dealer : {dealer}
                 </div>
 
                 <div className="bill-title">BILL OF SUPPLY</div>

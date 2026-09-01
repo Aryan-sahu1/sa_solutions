@@ -39,6 +39,8 @@ const AccountStatementPaper = ({
     rows,
     toDate,
 }) => {
+    const dealer = customer?.dealer || "Hindustan Petroleum Corporation Ltd.";
+
     return (
         <div className="account-statement-paper">
             <div className="statement-company-meta">
@@ -51,7 +53,7 @@ const AccountStatementPaper = ({
 
             <div className="statement-company-header">
                 <h2>{String(reportTitle || "").toUpperCase()}</h2>
-                <div>Dealer : Hindustan Petroleum Corporation&nbsp; Ltd.</div>
+                <div>Dealer : {dealer}</div>
                 <div>{customer?.address || ""}</div>
                 <div>{customer?.address1 || ""}</div>
             </div>

@@ -206,6 +206,7 @@ const Reports = () => {
         customer?.name ||
         "HAMARA PUMP JASPURA"
     );
+    const dealer = customer?.dealer || "Hindustan Petroleum Corporation Ltd.";
     const dateRangeLabel =
         `${formatDisplayDate(formData.fromDate)}-${formatDisplayDate(formData.toDate)}`;
     const reportHeading = isDailyReportActive
@@ -480,7 +481,7 @@ const Reports = () => {
                                 margin: [0, 6, 0, 3],
                             },
                             {
-                                text: "Dealer : Hindustan Petroleum Corporation  Ltd.",
+                                text: `Dealer : ${dealer}`,
                                 alignment: "center",
                                 fontSize: 7.5,
                             },

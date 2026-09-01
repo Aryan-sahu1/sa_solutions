@@ -33,6 +33,7 @@ const OilLubBillPaper = ({ annexure }) => {
     const cgst = taxableTotal * 0.09;
     const sgst = taxableTotal * 0.09;
     const grandTotal = taxableTotal + cgst + sgst;
+    const dealer = customer?.dealer || "Hindustan Petroleum Corporation Ltd.";
 
     return (
         <div className="oil-lub-bill-paper">
@@ -53,7 +54,7 @@ const OilLubBillPaper = ({ annexure }) => {
                     <h2>{customer?.address || customer?.address1 || ""}</h2>
                 </div>
 
-                <div className="oil-dealer">Dealer : Hindustan Petroleum Corporation Ltd.</div>
+                <div className="oil-dealer">Dealer : {dealer}</div>
 
                 <div className="oil-info-row">
                     <div>

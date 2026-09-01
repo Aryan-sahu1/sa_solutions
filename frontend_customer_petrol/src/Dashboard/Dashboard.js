@@ -268,6 +268,18 @@ const Dashboard = () => {
                                 <strong>{customer?.gstno || "Not set"}</strong>
                             </div>
                             <div>
+                                <span>Dealer</span>
+                                <strong>{customer?.dealer || "Not set"}</strong>
+                            </div>
+                            <div>
+                                <span>PAN No.</span>
+                                <strong>{customer?.panno || "Not set"}</strong>
+                            </div>
+                            <div>
+                                <span>Udyam No.</span>
+                                <strong>{customer?.udyamno || "Not set"}</strong>
+                            </div>
+                            <div>
                                 <span>Username</span>
                                 <strong>{customer?.username || "Not set"}</strong>
                             </div>

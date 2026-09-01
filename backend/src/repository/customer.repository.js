@@ -4,6 +4,9 @@ const create = async (body) => {
     const sql = `
         INSERT INTO customers (
             name,
+            dealer,
+            panno,
+            udyamno,
             address,
             address1,
             contact_person,
@@ -19,11 +22,14 @@ const create = async (body) => {
             company_code,
             remarks
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const [result] = await db.query(sql, [
         body.name,
+        body.dealer,
+        body.panno,
+        body.udyamno,
         body.address,
         body.address1,
         body.contact_person,
@@ -54,6 +60,9 @@ const findAll = async (page, limit, search) => {
         where += `
             AND (
                 c.name LIKE ?
+                OR c.dealer LIKE ?
+                OR c.panno LIKE ?
+                OR c.udyamno LIKE ?
                 OR c.address LIKE ?
                 OR c.address1 LIKE ?
                 OR c.contact_person LIKE ?
@@ -75,6 +84,9 @@ const findAll = async (page, limit, search) => {
             searchTerm,
             searchTerm,
             searchTerm,
+            searchTerm,
+            searchTerm,
+            searchTerm,
             searchTerm
         );
     }
@@ -83,6 +95,9 @@ const findAll = async (page, limit, search) => {
         SELECT
             c.id,
             c.name,
+            c.dealer,
+            c.panno,
+            c.udyamno,
             c.address,
             c.address1,
             c.contact_person,
@@ -160,6 +175,9 @@ const findById = async (id) => {
         SELECT
             c.id,
             c.name,
+            c.dealer,
+            c.panno,
+            c.udyamno,
             c.address,
             c.address1,
             c.contact_person,
@@ -210,6 +228,9 @@ const update = async (id, body) => {
         UPDATE customers
         SET
             name = ?,
+            dealer = ?,
+            panno = ?,
+            udyamno = ?,
             address = ?,
             address1 = ?,
             contact_person = ?,
@@ -230,6 +251,9 @@ const update = async (id, body) => {
 
     const [result] = await db.query(sql, [
         body.name,
+        body.dealer,
+        body.panno,
+        body.udyamno,
         body.address,
         body.address1,
         body.contact_person,

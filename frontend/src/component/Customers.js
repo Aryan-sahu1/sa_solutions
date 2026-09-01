@@ -26,6 +26,9 @@ const Customers = () => {
 
     const [formData, setFormData] = useState({
         name: "",
+        dealer: "",
+        panno: "",
+        udyamno: "",
         address: "",
         address1: "",
         contact_person: "",
@@ -180,6 +183,9 @@ const Customers = () => {
     const resetForm = () => {
         setFormData({
             name: "",
+            dealer: "",
+            panno: "",
+            udyamno: "",
             address: "",
             address1: "",
             contact_person: "",
@@ -278,6 +284,9 @@ const Customers = () => {
                     `http://localhost:4000/api/customers/${editId}`,
                     {
                         name: formData.name.trim(),
+                        dealer: formData.dealer.trim(),
+                        panno: formData.panno.trim(),
+                        udyamno: formData.udyamno.trim(),
                         address: formData.address.trim(),
                         address1: formData.address1.trim(),
                         contact_person:
@@ -313,6 +322,9 @@ const Customers = () => {
                     "http://localhost:4000/api/customers",
                     {
                         name: formData.name.trim(),
+                        dealer: formData.dealer.trim(),
+                        panno: formData.panno.trim(),
+                        udyamno: formData.udyamno.trim(),
                         address: formData.address.trim(),
                         address1: formData.address1.trim(),
                         contact_person:
@@ -378,6 +390,9 @@ const Customers = () => {
 
         setFormData({
             name: customer.name || "",
+            dealer: customer.dealer || "",
+            panno: customer.panno || "",
+            udyamno: customer.udyamno || "",
             address: customer.address || "",
             address1: customer.address1 || "",
             contact_person: customer.contact_person || "",
@@ -659,6 +674,63 @@ const Customers = () => {
                                         className="form-control"
                                         placeholder="Enter customer name"
                                         value={formData.name}
+                                        onChange={handleChange}
+                                    />
+
+                                </div>
+
+                                {/* DEALER */}
+
+                                <div className="col-md-6 mb-3">
+
+                                    <label className="form-label fw-semibold">
+                                        Dealer
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        name="dealer"
+                                        className="form-control"
+                                        placeholder="Enter dealer name"
+                                        value={formData.dealer}
+                                        onChange={handleChange}
+                                    />
+
+                                </div>
+
+                                {/* PAN NO */}
+
+                                <div className="col-md-6 mb-3">
+
+                                    <label className="form-label fw-semibold">
+                                        PAN No
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        name="panno"
+                                        className="form-control"
+                                        placeholder="Enter PAN number"
+                                        value={formData.panno}
+                                        onChange={handleChange}
+                                    />
+
+                                </div>
+
+                                {/* UDYAM NO */}
+
+                                <div className="col-md-6 mb-3">
+
+                                    <label className="form-label fw-semibold">
+                                        Udyam No
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        name="udyamno"
+                                        className="form-control"
+                                        placeholder="Enter Udyam number"
+                                        value={formData.udyamno}
                                         onChange={handleChange}
                                     />
 
@@ -1058,6 +1130,30 @@ const Customers = () => {
                             body={customerBodyTemplate}
                             style={{
                                 minWidth: "220px",
+                            }}
+                        />
+
+                        <Column
+                            field="dealer"
+                            header="Dealer"
+                            style={{
+                                minWidth: "180px",
+                            }}
+                        />
+
+                        <Column
+                            field="panno"
+                            header="PAN No"
+                            style={{
+                                minWidth: "150px",
+                            }}
+                        />
+
+                        <Column
+                            field="udyamno"
+                            header="Udyam No"
+                            style={{
+                                minWidth: "180px",
                             }}
                         />
 
