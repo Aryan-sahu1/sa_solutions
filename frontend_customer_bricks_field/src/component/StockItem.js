@@ -12,6 +12,7 @@ const initialFormData = {
     o_rate: "",
     gst: "",
     gst_code: "",
+    measurement_data: "",
 };
 
 const toInputValue = (value) => {
@@ -192,6 +193,7 @@ const StockItem = () => {
             o_rate: toInputValue(formData.o_rate).trim(),
             gst: toInputValue(formData.gst).trim(),
             gst_code: toInputValue(formData.gst_code).trim(),
+            measurement_data: toInputValue(formData.measurement_data).trim(),
         };
 
         if (!payload.name) {
@@ -264,6 +266,7 @@ const StockItem = () => {
             o_rate: toInputValue(item.o_rate),
             gst: toInputValue(item.gst),
             gst_code: toInputValue(item.gst_code),
+            measurement_data: toInputValue(item.measurement_data),
         });
         setCategoryFilter(toInputValue(item.pid));
         setShowForm(true);
@@ -500,6 +503,20 @@ const StockItem = () => {
                                     />
                                 </div>
 
+                                <div className="col-md-3">
+                                    <label className="form-label fw-semibold">
+                                        Measurement Data
+                                    </label>
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        name="measurement_data"
+                                        placeholder="Enter measurement data"
+                                        value={formData.measurement_data}
+                                        onChange={handleChange}
+                                    />
+                                </div>
+
                                 <div className="col-12">
                                     <button
                                         type="submit"
@@ -613,6 +630,7 @@ const StockItem = () => {
                         <Column field="o_rate" header="Opening Rate" />
                         <Column field="gst" header="GST" />
                         <Column field="gst_code" header="GST Code" />
+                        <Column field="measurement_data" header="Measurement Data" />
                         <Column
                             header="Action"
                             body={actionBodyTemplate}

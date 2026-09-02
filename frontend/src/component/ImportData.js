@@ -84,8 +84,8 @@ const ImportData = () => {
         }
 
         const extension = file.name.split(".").pop()?.toLowerCase();
-        if (extension !== "xlsx") {
-            setError("Only .xlsx file is supported");
+        if (!["xls", "xlsx"].includes(extension)) {
+            setError("Only .xls and .xlsx files are supported");
             return;
         }
 
@@ -188,7 +188,7 @@ const ImportData = () => {
                                 <input
                                     type="file"
                                     className="form-control"
-                                    accept=".xlsx"
+                                    accept=".xls,.xlsx"
                                     onChange={handleFileChange}
                                     disabled={loading}
                                 />
@@ -236,9 +236,11 @@ const ImportData = () => {
                 </div>
                 <div className="card-body">
                     <p className="text-muted">
-                        Workbook me sheet names table names ke same rakho.
-                        Har sheet me first column `id` ya `old_id` rakho, taki
-                        importer old id se new id mapping bana sake.
+                        Workbook me ek sheet ya multiple sheets upload kar sakte
+                        ho. Har sheet me first column `id` ya `old_id` rakho,
+                        taki importer old id se new id mapping bana sake.
+                        Old format names jaise `productcategory`,
+                        `stockitem`, aur `head master` bhi accepted hain.
                     </p>
 
                     <div className="table-responsive">

@@ -11,9 +11,10 @@ const create = async (body, userId) => {
             o_rate,
             gst,
             gst_code,
-            cid
+            cid,
+            measurement_data
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const [result] = await db.query(sql, [
@@ -25,7 +26,8 @@ const create = async (body, userId) => {
         body.o_rate || null,
         body.gst || null,
         body.gst_code || null,
-        userId
+        userId,
+        body.measurement_data || null
     ]);
 
     return result;
@@ -60,10 +62,12 @@ const findAll = async ({
                 OR si.o_rate LIKE ?
                 OR si.gst LIKE ?
                 OR si.gst_code LIKE ?
+                OR si.measurement_data LIKE ?
             )
         `;
         const searchTerm = `%${String(search).trim()}%`;
         params.push(
+            searchTerm,
             searchTerm,
             searchTerm,
             searchTerm,
@@ -88,6 +92,7 @@ const findAll = async ({
             si.o_rate,
             si.gst,
             si.gst_code,
+            si.measurement_data,
             si.created_at,
             si.updated_at,
             si.deleted_at,
@@ -149,6 +154,7 @@ const findById = async (id, userId) => {
             si.o_rate,
             si.gst,
             si.gst_code,
+            si.measurement_data,
             si.created_at,
             si.updated_at,
             si.deleted_at,
@@ -179,7 +185,8 @@ const update = async (id, body, userId) => {
             o_quantity = ?,
             o_rate = ?,
             gst = ?,
-            gst_code = ?
+            gst_code = ?,
+            measurement_data = ?
         WHERE id = ?
         AND cid = ?
         AND deleted_at IS NULL
@@ -194,6 +201,7 @@ const update = async (id, body, userId) => {
         body.o_rate || null,
         body.gst || null,
         body.gst_code || null,
+        body.measurement_data || null,
         id,
         userId
     ]);

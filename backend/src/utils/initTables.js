@@ -153,6 +153,10 @@ const syncCustomerColumns = async () => {
     await addColumnIfMissing("customers", "udyamno", "`udyamno` VARCHAR(55) NULL DEFAULT NULL AFTER `panno`");
 };
 
+const syncStockItemColumns = async () => {
+    await addColumnIfMissing("stock_item", "measurement_data", "`measurement_data` VARCHAR(20) NULL DEFAULT NULL");
+};
+
 const syncTranSalesColumns = async () => {
     await addColumnIfMissing("tran", "vehicle_no", "`vehicle_no` INT(11) NULL DEFAULT NULL");
     await addColumnIfMissing("tran", "slip_no", "`slip_no` VARCHAR(50) NULL DEFAULT NULL");
@@ -223,6 +227,7 @@ const initTables = async () => {
     await initBillTable();
     await syncBillColumns();
     await syncCustomerColumns();
+    await syncStockItemColumns();
     await syncTranSalesColumns();
     await syncMasterForeignKey();
 };

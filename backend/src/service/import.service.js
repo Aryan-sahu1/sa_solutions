@@ -8,17 +8,61 @@ const db = require("../config/db");
 const execFileAsync = promisify(execFile);
 
 const parserPath = path.join(__dirname, "../scripts/parseXlsx.php");
+const xlsConverterPath = path.join(__dirname, "../scripts/convertXlsToXlsx.ps1");
+
+const sheetAliases = {
+    productcategory: "product_category",
+    product_category: "product_category",
+    stockitem: "stock_item",
+    stock_item: "stock_item",
+    vehiclemaster: "vehicle_master",
+    vehicle_master: "vehicle_master",
+    headmaster: "head_master",
+    head_master: "head_master",
+    party: "party",
+    sheet4: "party",
+    sheet1: ' vehicle_master'
+};
+
+const normalizeName = (value) => (
+    String(value || "")
+        .trim()
+        .replace(/\s+/g, " ")
+        .toLowerCase()
+);
+
+const normalizeHeadType = (value) => {
+    const normalized = String(value || "").trim().toUpperCase();
+
+    if (normalized === "B/S" || normalized === "BS" || normalized === "BALANCE SHEET") {
+        return "Balance Sheet";
+    }
+
+    if (normalized === "P/L" || normalized === "PL" || normalized === "PROFIT/LOSS") {
+        return "Profit/Loss";
+    }
+
+    if (normalized === "TRADING") {
+        return "Trading";
+    }
+
+    return "Balance Sheet";
+};
 
 const tableConfigs = {
     head_master: {
         columns: ["name", "head_type", "cid"],
         map: "head_master",
-        values: (row, ctx) => [row.name, row.head_type, ctx.customerId]
+        values: (row, ctx) => [
+            row.name,
+            normalizeHeadType(row.head_type || row.headtype),
+            ctx.customerId
+        ]
     },
     product_category: {
         columns: ["name", "cid", "unit"],
         map: "product_category",
-        values: (row, ctx) => [row.name, ctx.customerId, row.unit]
+        values: (row, ctx) => [row.name, ctx.customerId, row.unit || ""]
     },
     t_head_master: {
         columns: ["name"],
@@ -28,13 +72,17 @@ const tableConfigs = {
     party: {
         columns: ["name", "cid", "address", "phone_no", "openbal", "sid", "sid1", "salary"],
         map: "party",
-        values: (row, ctx) => [
+        values: async (row, ctx) => [
             row.name || null,
             ctx.customerId,
             row.address || null,
             row.phone_no || null,
             row.openbal || 0,
-            ctx.mapId("head_master", row.sid, "party.sid"),
+            row.head_master_name
+                ? await ctx.resolveOrCreateByName("head_master", row.head_master_name, {
+                    head_type: row.head_type
+                })
+                : ctx.mapId("head_master", row.sid, "party.sid"),
             row.sid1
                 ? ctx.mapOptionalId("t_head_master", row.sid1, "party.sid1")
                 : null,
@@ -42,27 +90,34 @@ const tableConfigs = {
         ]
     },
     stock_item: {
-        columns: ["name", "inLtr", "pid", "measure_unit", "o_quantity", "o_rate", "gst", "gst_code", "cid"],
+        columns: ["name", "inLtr", "pid", "measure_unit", "o_quantity", "o_rate", "gst", "gst_code", "cid", "measurement_data"],
         map: "stock_item",
-        values: (row, ctx) => [
+        values: async (row, ctx) => [
             row.name,
             row.inltr || row.inLtr || null,
-            ctx.mapId("product_category", row.pid, "stock_item.pid", true),
+            row.product_category_name
+                ? await ctx.resolveOrCreateByName("product_category", row.product_category_name, {
+                    unit: row.measure_unit || row.unit
+                })
+                : ctx.mapId("product_category", row.pid, "stock_item.pid", true),
             row.measure_unit || null,
             row.o_quantity || null,
             row.o_rate || null,
             row.gst || null,
             row.gst_code || null,
-            ctx.customerId
+            ctx.customerId,
+            row.measurement_data || null
         ]
     },
     vehicle_master: {
         columns: ["name", "balance", "sid", "cid"],
         map: "vehicle_master",
-        values: (row, ctx) => [
+        values: async (row, ctx) => [
             row.name,
             row.balance || 0,
-            ctx.mapId("party", row.sid, "vehicle_master.sid"),
+            row.party_name
+                ? await ctx.resolveOrCreateByName("party", row.party_name)
+                : ctx.mapId("party", row.sid, "vehicle_master.sid"),
             ctx.customerId
         ]
     },
@@ -206,30 +261,88 @@ const normalizeSheetName = (name) => (
         .replace(/[\s-]+/g, "_")
 );
 
-const normalizeRow = (row) => {
+const canonicalSheetName = (name) => {
+    const normalized = normalizeSheetName(name);
+    return sheetAliases[normalized] || normalized;
+};
+
+const fieldAliases = {
+    "stockitem.name": "name",
+    "vehiclemaster.name": "name",
+    "productcategory.name": "product_category_name",
+    "partyname": "party_name",
+    "headmaster.name": "head_master_name",
+    "headmaster.headtype": "head_type",
+    headtype: "head_type",
+    add: "address",
+    add1: "address1",
+    phoneno: "phone_no",
+    cperson: "contact_person",
+    tinno: "gstno",
+    oqty: "o_quantity",
+    pcsltr: "measurement_data",
+    vat: "gst",
+    vatcode: "gst_code",
+    unit: "measure_unit",
+};
+
+const normalizeRow = (row, sheetName) => {
     return Object.entries(row).reduce((acc, [key, value]) => {
         const normalizedKey = String(key).trim().toLowerCase();
+        const canonicalKey = normalizedKey === "party.name"
+            ? (sheetName === "party" ? "name" : "party_name")
+            : fieldAliases[normalizedKey] || normalizedKey;
         acc[normalizedKey] = typeof value === "string" ? value.trim() : value;
+        acc[canonicalKey] = typeof value === "string" ? value.trim() : value;
         return acc;
     }, {});
 };
 
 const parseWorkbook = async (buffer) => {
+    const isXls = buffer.slice(0, 8).equals(
+        Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1])
+    );
+
     const tmpPath = path.join(
         os.tmpdir(),
-        `petrol-import-${Date.now()}-${Math.random().toString(16).slice(2)}.xlsx`
+        `petrol-import-${Date.now()}-${Math.random().toString(16).slice(2)}.${isXls ? "xls" : "xlsx"}`
     );
+    const convertedPath = isXls
+        ? tmpPath.replace(/\.xls$/i, ".xlsx")
+        : tmpPath;
 
     await fs.writeFile(tmpPath, buffer);
 
     try {
-        const { stdout } = await execFileAsync("php", [parserPath, tmpPath], {
+        if (isXls) {
+            await execFileAsync(
+                "powershell",
+                [
+                    "-NoProfile",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-File",
+                    xlsConverterPath,
+                    tmpPath,
+                    convertedPath
+                ],
+                {
+                    maxBuffer: 20 * 1024 * 1024,
+                    windowsHide: true
+                }
+            );
+        }
+
+        const { stdout } = await execFileAsync("php", [parserPath, convertedPath], {
             maxBuffer: 20 * 1024 * 1024
         });
 
         return JSON.parse(stdout);
     } finally {
         await fs.unlink(tmpPath).catch(() => {});
+        if (convertedPath !== tmpPath) {
+            await fs.unlink(convertedPath).catch(() => {});
+        }
     }
 };
 
@@ -243,6 +356,58 @@ const excelSerialToDate = (value) => {
     const utcValue = utcDays * 86400;
     const dateInfo = new Date(utcValue * 1000);
     return dateInfo.toISOString().slice(0, 19).replace("T", " ");
+};
+
+const preloadNameMaps = async (connection, customerId) => {
+    const nameMap = {
+        head_master: {},
+        product_category: {},
+        party: {}
+    };
+
+    const [headMasters] = await connection.query(
+        `
+            SELECT id, name
+            FROM head_master
+            WHERE cid = ?
+            AND deleted_at IS NULL
+        `,
+        [customerId]
+    );
+
+    for (const row of headMasters) {
+        nameMap.head_master[normalizeName(row.name)] = row.id;
+    }
+
+    const [productCategories] = await connection.query(
+        `
+            SELECT id, name
+            FROM product_category
+            WHERE cid = ?
+            AND deleted_at IS NULL
+        `,
+        [customerId]
+    );
+
+    for (const row of productCategories) {
+        nameMap.product_category[normalizeName(row.name)] = row.id;
+    }
+
+    const [parties] = await connection.query(
+        `
+            SELECT id, name
+            FROM party
+            WHERE cid = ?
+            AND deleted_at IS NULL
+        `,
+        [customerId]
+    );
+
+    for (const row of parties) {
+        nameMap.party[normalizeName(row.name)] = row.id;
+    }
+
+    return nameMap;
 };
 
 const importWorkbook = async ({ customerId, buffer }) => {
@@ -260,7 +425,11 @@ const importWorkbook = async ({ customerId, buffer }) => {
 
     const parsed = await parseWorkbook(buffer);
     const sheets = Object.entries(parsed).reduce((acc, [name, rows]) => {
-        acc[normalizeSheetName(name)] = rows.map(normalizeRow);
+        const sheetName = canonicalSheetName(name);
+        acc[sheetName] = [
+            ...(acc[sheetName] || []),
+            ...rows.map((row) => normalizeRow(row, sheetName))
+        ];
         return acc;
     }, {});
 
@@ -270,6 +439,12 @@ const importWorkbook = async ({ customerId, buffer }) => {
 
     const ctx = {
         customerId: Number(customerId),
+        connection,
+        nameMap: {
+            head_master: {},
+            product_category: {},
+            party: {}
+        },
         dateValue(value) {
             if (value === undefined || value === null || value === "") {
                 return null;
@@ -285,10 +460,10 @@ const importWorkbook = async ({ customerId, buffer }) => {
 
             const key = String(oldId);
             const mapped = idMap[table]?.[key];
-            if (!mapped) {
+            if (!mapped && idMap[table]) {
                 throw new Error(`${label} old id ${oldId} mapping not found`);
             }
-            return mapped;
+            return mapped || oldId;
         },
         mapOptionalId(table, oldId, label) {
             if (!idMap[table]) {
@@ -296,6 +471,88 @@ const importWorkbook = async ({ customerId, buffer }) => {
             }
 
             return this.mapId(table, oldId, label);
+        },
+        async resolveOrCreateByName(table, name, extra = {}) {
+            const cleanName = String(name || "").trim();
+            const key = normalizeName(cleanName);
+
+            if (!cleanName) {
+                throw new Error(`${table} name is required for relation mapping`);
+            }
+
+            if (this.nameMap[table]?.[key]) {
+                return this.nameMap[table][key];
+            }
+
+            let result;
+
+            if (table === "head_master") {
+                [result] = await this.connection.query(
+                    `
+                        INSERT INTO head_master (name, cid, head_type)
+                        VALUES (?, ?, ?)
+                    `,
+                    [
+                        cleanName,
+                        this.customerId,
+                        normalizeHeadType(extra.head_type)
+                    ]
+                );
+            } else if (table === "product_category") {
+                [result] = await this.connection.query(
+                    `
+                        INSERT INTO product_category (name, cid, unit)
+                        VALUES (?, ?, ?)
+                    `,
+                    [
+                        cleanName,
+                        this.customerId,
+                        extra.unit || ""
+                    ]
+                );
+            } else if (table === "party") {
+                const defaultHeadId = await this.resolveOrCreateByName(
+                    "head_master",
+                    extra.head_master_name || "SUNDRY DEBTORS",
+                    {
+                        head_type: extra.head_type || "Balance Sheet"
+                    }
+                );
+
+                [result] = await this.connection.query(
+                    `
+                        INSERT INTO party (
+                            name,
+                            cid,
+                            address,
+                            phone_no,
+                            openbal,
+                            sid,
+                            sid1,
+                            salary
+                        )
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    `,
+                    [
+                        cleanName,
+                        this.customerId,
+                        extra.address || null,
+                        extra.phone_no || null,
+                        extra.openbal || 0,
+                        defaultHeadId,
+                        null,
+                        null
+                    ]
+                );
+            } else {
+                throw new Error(`Unsupported name mapping table ${table}`);
+            }
+
+            this.nameMap[table] = this.nameMap[table] || {};
+            this.nameMap[table][key] = result.insertId;
+            summary[table] = (summary[table] || 0) + 1;
+
+            return result.insertId;
         }
     };
 
@@ -312,6 +569,8 @@ const importWorkbook = async ({ customerId, buffer }) => {
             error.statusCode = 404;
             throw error;
         }
+
+        ctx.nameMap = await preloadNameMaps(connection, ctx.customerId);
 
         for (const tableName of importOrder) {
             const rows = sheets[tableName] || [];
@@ -333,10 +592,18 @@ const importWorkbook = async ({ customerId, buffer }) => {
 
             for (const row of rows) {
                 const oldId = row.old_id || row.id;
-                const [result] = await connection.query(sql, config.values(row, ctx));
+                const values = await config.values(row, ctx);
+                const [result] = await connection.query(sql, values);
 
                 if (oldId !== undefined && oldId !== null && oldId !== "") {
                     idMap[config.map][String(oldId)] = result.insertId;
+                }
+
+                if (
+                    (tableName === "head_master" || tableName === "product_category") &&
+                    row.name
+                ) {
+                    ctx.nameMap[tableName][normalizeName(row.name)] = result.insertId;
                 }
 
                 summary[tableName]++;

@@ -10,6 +10,7 @@ router.post(
     express.raw({
         type: [
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/vnd.ms-excel",
             "application/octet-stream"
         ],
         limit: "50mb"

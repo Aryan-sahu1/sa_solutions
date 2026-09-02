@@ -166,12 +166,12 @@ $sheets = [
         [7, 'Card Settlement Account', 'POS Machine', '9444444444', 12000, 2, 4, ''],
     ],
     'stock_item' => [
-        ['id', 'name', 'inltr', 'pid', 'measure_unit', 'o_quantity', 'o_rate', 'gst', 'gst_code'],
-        [1, 'MS Petrol', 1, 1, 'LTR', 12000, 101.25, 18, '2710'],
-        [2, 'HSD Diesel', 1, 2, 'LTR', 18000, 92.10, 18, '2710'],
-        [3, 'Power Petrol', 1, 3, 'LTR', 4500, 108.50, 18, '2710'],
-        [4, 'Servo Engine Oil 1L', 0, 4, 'PCS', 120, 320, 18, '2710'],
-        [5, 'CNG Gas', 0, 5, 'KG', 800, 84.75, 5, '2711'],
+        ['id', 'name', 'inltr', 'pid', 'measure_unit', 'o_quantity', 'o_rate', 'gst', 'gst_code', 'measurement_data'],
+        [1, 'MS Petrol', 1, 1, 'LTR', 12000, 101.25, 18, '2710', 90.558087],
+        [2, 'HSD Diesel', 1, 2, 'LTR', 18000, 92.10, 18, '2710', 84.991385],
+        [3, 'Power Petrol', 1, 3, 'LTR', 4500, 108.50, 18, '2710', 96.536109],
+        [4, 'Servo Engine Oil 1L', 0, 4, 'PCS', 120, 320, 18, '2710', 176.42083],
+        [5, 'CNG Gas', 0, 5, 'KG', 800, 84.75, 5, '2711', 84.75],
     ],
     'vehicle_master' => [
         ['id', 'name', 'balance', 'sid'],
