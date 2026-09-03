@@ -21,7 +21,8 @@ const findAll = async (req, res, next) => {
             page: Number(req.query.page) || 1,
             limit: Number(req.query.limit) || 10,
             search: req.query.search || "",
-            date: req.query.date || ""
+            date: req.query.date || "",
+            purchase_type: req.query.purchase_type || ""
         });
 
         return res.status(200).json({

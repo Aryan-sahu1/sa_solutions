@@ -16,6 +16,8 @@ const isEmpty = (value) => (
     String(value).trim() === ""
 );
 
+const isBrickPurchase = (body) => body.purchase_type === "bricks";
+
 const validatePayload = (body) => {
     if (isEmpty(body.date)) throw createError("Date is required");
     if (isEmpty(body.slip_no)) throw createError("Slip no is required");
@@ -56,6 +58,25 @@ const validatePayload = (body) => {
 
         if (Number.isNaN(Number(item.amt))) {
             throw createError(`Item amount must be a valid number at row ${index + 1}`);
+        }
+    });
+};
+
+const validateBrickPayload = (body) => {
+    if (isEmpty(body.date)) throw createError("Date is required");
+    if (isEmpty(body.pid)) throw createError("Party is required");
+    if (isEmpty(body.iid)) throw createError("Stock item is required");
+    if (isEmpty(body.qty)) throw createError("Quantity is required");
+    if (isEmpty(body.amt)) throw createError("Amount is required");
+
+    if (Number.isNaN(Number(body.pid))) throw createError("Party must be a valid id");
+    if (Number.isNaN(Number(body.iid))) throw createError("Stock item must be a valid id");
+    if (Number.isNaN(Number(body.qty))) throw createError("Quantity must be a valid number");
+    if (Number.isNaN(Number(body.amt))) throw createError("Amount must be a valid number");
+
+    ["cash", "cgst", "igst"].forEach((field) => {
+        if (!isEmpty(body[field]) && Number.isNaN(Number(body[field]))) {
+            throw createError(`${field} must be a valid number`);
         }
     });
 };
@@ -121,7 +142,56 @@ const normalizePayload = async (body, userId) => {
     };
 };
 
+const normalizeBrickPayload = async (body, userId) => {
+    const party = await partyRepository.findById(body.pid, userId);
+    if (!party) throw createError("Selected party does not exist", 404);
+
+    const purchaseAccount =
+        await partyRepository.findByName("Purchase", userId) ||
+        await partyRepository.findByName("Purchases", userId);
+
+    if (!purchaseAccount) {
+        throw createError("First create Purchase account in party");
+    }
+
+    const stockItem = await stockItemRepository.findById(body.iid, userId);
+
+    if (!stockItem) {
+        throw createError("Selected stock item does not exist", 404);
+    }
+
+    return {
+        date: String(body.date).trim().replace("T", " "),
+        slip_no: body.slip_no ? String(body.slip_no).trim() : null,
+        remarks: body.remarks ? String(body.remarks).trim() : null,
+        pid: Number(purchaseAccount.id),
+        crid: Number(body.pid),
+        vehicle_no: null,
+        vehicle_text: body.vehicle_text ? String(body.vehicle_text).trim() : null,
+        cash: isEmpty(body.cash) ? null : String(body.cash).trim(),
+        cgst: isEmpty(body.cgst) ? null : String(body.cgst).trim(),
+        igst: isEmpty(body.igst) ? null : String(body.igst).trim(),
+        type1: "BRICKS",
+        amt: String(body.amt).trim(),
+        items: [
+            {
+                product_id: Number(stockItem.pid) || null,
+                iid: Number(body.iid),
+                qty: Number(body.qty),
+                rate: isEmpty(body.rate) ? null : String(body.rate).trim(),
+                amt: String(body.amt).trim()
+            }
+        ]
+    };
+};
+
 const create = async (body, userId) => {
+    if (isBrickPurchase(body)) {
+        validateBrickPayload(body);
+        const payload = await normalizeBrickPayload(body, userId);
+        return await purchaseRepository.create(payload, userId);
+    }
+
     validatePayload(body);
     const payload = await normalizePayload(body, userId);
     return await purchaseRepository.create(payload, userId);
@@ -134,12 +204,15 @@ const findAll = async (options = {}) => {
     if (page < 1) page = 1;
     if (limit < 1) limit = 10;
 
+    const filterType1 = options.purchase_type === "bricks" ? "BRICKS" : undefined;
+
     return await purchaseRepository.findAll({
         userId: options.userId,
         page,
         limit,
         search: options.search || "",
-        date: options.date || ""
+        date: options.date || "",
+        type1: filterType1
     });
 };
 
@@ -154,6 +227,18 @@ const findById = async (id, userId) => {
 };
 
 const update = async (id, body, userId) => {
+    if (isBrickPurchase(body)) {
+        validateBrickPayload(body);
+
+        const existingData = await purchaseRepository.findById(id, userId);
+        if (!existingData) throw createError("Purchase entry not found", 404);
+
+        const payload = await normalizeBrickPayload(body, userId);
+        await purchaseRepository.update(id, payload, userId);
+
+        return await purchaseRepository.findById(id, userId);
+    }
+
     validatePayload(body);
 
     const existingData = await purchaseRepository.findById(id, userId);

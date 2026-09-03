@@ -12,6 +12,9 @@ const initialFormData = {
     sid: "",
     sid1: "",
     salary: "",
+    gstno: "",
+    email_id: "",
+    brick_type: "",
 };
 
 const toInputValue = (value) => {
@@ -22,11 +25,12 @@ const toInputValue = (value) => {
     return String(value);
 };
 
-const Party = () => {
+const BrickParty = () => {
     const { authHeaders } = useAuth();
     const [parties, setParties] = useState([]);
     const [headMasters, setHeadMasters] = useState([]);
     const [tHeadMasters, setTHeadMasters] = useState([]);
+    const [stockItems, setStockItems] = useState([]);
     const [formData, setFormData] = useState(initialFormData);
     const [showForm, setShowForm] = useState(false);
     const [editId, setEditId] = useState(null);
@@ -97,7 +101,7 @@ const Party = () => {
                 setTotalRecords(0);
                 setError(response.data.message || "No parties found");
             } catch (err) {
-                console.error("Party list error:", err);
+                console.error("Brick party list error:", err);
                 setParties([]);
                 setTotalRecords(0);
                 setError(
@@ -111,13 +115,13 @@ const Party = () => {
         [authHeaders]
     );
 
-    const getHeadOptions = useCallback(async () => {
+    const getOptions = useCallback(async () => {
         if (!authHeaders.Authorization) {
             return;
         }
 
         try {
-            const [headResult, tHeadResult] = await Promise.allSettled([
+            const [headResult, tHeadResult, stockResult] = await Promise.allSettled([
                 axios.get("http://localhost:4000/api/head-master", {
                     params: {
                         page: 1,
@@ -126,6 +130,13 @@ const Party = () => {
                     headers: authHeaders,
                 }),
                 axios.get("http://localhost:4000/api/t-head-master", {
+                    params: {
+                        page: 1,
+                        limit: 1000,
+                    },
+                    headers: authHeaders,
+                }),
+                axios.get("http://localhost:4000/api/stock-item", {
                     params: {
                         page: 1,
                         limit: 1000,
@@ -141,16 +152,21 @@ const Party = () => {
                 headResult.status === "fulfilled" &&
                 headResult.value.data.status
             ) {
-                const headResponse = headResult.value;
-                nextHeadMasters = headResponse.data.data || [];
+                nextHeadMasters = headResult.value.data.data || [];
             }
 
             if (
                 tHeadResult.status === "fulfilled" &&
                 tHeadResult.value.data.status
             ) {
-                const tHeadResponse = tHeadResult.value;
-                nextTHeadMasters = tHeadResponse.data.data || [];
+                nextTHeadMasters = tHeadResult.value.data.data || [];
+            }
+
+            if (
+                stockResult.status === "fulfilled" &&
+                stockResult.value.data.status
+            ) {
+                setStockItems(stockResult.value.data.data || []);
             }
 
             setHeadMasters(nextHeadMasters);
@@ -161,17 +177,17 @@ const Party = () => {
                 sid1: current.sid1 || toInputValue(nextTHeadMasters[0]?.id),
             }));
         } catch (err) {
-            console.error("Party head option error:", err);
+            console.error("Brick party option error:", err);
             setError(
                 err.response?.data?.message ||
-                "Failed to fetch head options"
+                "Failed to fetch party options"
             );
         }
     }, [authHeaders]);
 
     useEffect(() => {
-        getHeadOptions();
-    }, [getHeadOptions]);
+        getOptions();
+    }, [getOptions]);
 
     useEffect(() => {
         getParties(page, limit, debouncedSearch);
@@ -217,9 +233,10 @@ const Party = () => {
             sid: formData.sid,
             sid1: formData.sid1,
             salary: toInputValue(formData.salary).trim(),
+            gstno: toInputValue(formData.gstno).trim(),
+            email_id: toInputValue(formData.email_id).trim(),
+            brick_type: formData.brick_type,
         };
-
-         
 
         if (!payload.sid) {
             setError("Head master is required");
@@ -265,7 +282,7 @@ const Party = () => {
 
             setError(response.data.message || "Failed to save party");
         } catch (err) {
-            console.error("Save party error:", err);
+            console.error("Save brick party error:", err);
             setError(
                 err.response?.data?.message ||
                 "Failed to save party"
@@ -285,6 +302,9 @@ const Party = () => {
             sid: toInputValue(party.sid),
             sid1: toInputValue(party.sid1),
             salary: toInputValue(party.salary),
+            gstno: toInputValue(party.gstno),
+            email_id: toInputValue(party.email_id),
+            brick_type: toInputValue(party.brick_type),
         });
         setShowForm(true);
         setMessage("");
@@ -333,7 +353,7 @@ const Party = () => {
 
             setError(response.data.message || "Failed to delete party");
         } catch (err) {
-            console.error("Delete party error:", err);
+            console.error("Delete brick party error:", err);
             setError(
                 err.response?.data?.message ||
                 "Failed to delete party"
@@ -352,6 +372,10 @@ const Party = () => {
 
     const headBodyTemplate = (row) => {
         return row.head_master_name || "-";
+    };
+
+    const brickTypeBodyTemplate = (row) => {
+        return row.brick_type_name || "-";
     };
 
     const actionBodyTemplate = (row) => {
@@ -379,9 +403,9 @@ const Party = () => {
         <div className="container-fluid p-4">
             <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
                 <div>
-                    <h2 className="fw-bold mb-1">Party</h2>
+                    <h2 className="fw-bold mb-1">Brick Party</h2>
                     <p className="text-muted mb-0">
-                        Create and manage parties
+                        Create and manage brick parties
                     </p>
                 </div>
 
@@ -466,6 +490,53 @@ const Party = () => {
                                     />
                                 </div>
 
+                                <div className="col-md-4">
+                                    <label className="form-label fw-semibold">
+                                        GST No
+                                    </label>
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        name="gstno"
+                                        placeholder="Enter GST number"
+                                        value={formData.gstno}
+                                        onChange={handleChange}
+                                    />
+                                </div>
+
+                                <div className="col-md-4">
+                                    <label className="form-label fw-semibold">
+                                        Email
+                                    </label>
+                                    <input
+                                        type="email"
+                                        className="form-control"
+                                        name="email_id"
+                                        placeholder="Enter email"
+                                        value={formData.email_id}
+                                        onChange={handleChange}
+                                    />
+                                </div>
+
+                                <div className="col-md-4">
+                                    <label className="form-label fw-semibold">
+                                        Brick Type
+                                    </label>
+                                    <select
+                                        className="form-select"
+                                        name="brick_type"
+                                        value={formData.brick_type}
+                                        onChange={handleChange}
+                                    >
+                                        <option value="">Select brick type</option>
+                                        {stockItems.map((item) => (
+                                            <option key={item.id} value={item.id}>
+                                                {item.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
                                 <div className="col-md-6">
                                     <label className="form-label fw-semibold">
                                         Address
@@ -490,7 +561,6 @@ const Party = () => {
                                         value={formData.sid}
                                         onChange={handleChange}
                                     >
-                                
                                         {headMasters.map((head) => (
                                             <option key={head.id} value={head.id}>
                                                 {head.name}
@@ -509,7 +579,6 @@ const Party = () => {
                                         value={formData.sid1}
                                         onChange={handleChange}
                                     >
-                                     
                                         {tHeadMasters.map((head) => (
                                             <option key={head.id} value={head.id}>
                                                 {head.name}
@@ -563,7 +632,7 @@ const Party = () => {
                 <div className="card-header bg-white p-3">
                     <div className="row align-items-center">
                         <div className="col-md-6">
-                            <h5 className="mb-0">Party List</h5>
+                            <h5 className="mb-0">Brick Party List</h5>
                         </div>
 
                         <div className="col-md-6 mt-3 mt-md-0">
@@ -590,7 +659,7 @@ const Party = () => {
                         rowsPerPageOptions={[5, 10, 20, 50]}
                         onPage={handlePageChange}
                         responsiveLayout="scroll"
-                        tableStyle={{ minWidth: "30rem" }}
+                        tableStyle={{ minWidth: "58rem" }}
                         emptyMessage={
                             debouncedSearch
                                 ? "No parties found for this search"
@@ -615,13 +684,18 @@ const Party = () => {
                             style={{ width: "80px" }}
                         />
                         <Column field="name" header="Name" />
-                        <Column field="phone_no" header="Phone No" /> 
+                        <Column field="phone_no" header="Phone No" />
                         <Column field="openbal" header="Opening Balance" />
+                        <Column field="gstno" header="GST No" />
+                        <Column field="email_id" header="Email" />
+                        <Column
+                            header="Brick Type"
+                            body={brickTypeBodyTemplate}
+                        />
                         <Column
                             header="Head Master"
                             body={headBodyTemplate}
                         />
-                        
                         <Column field="salary" header="Salary" />
                         <Column
                             header="Action"
@@ -635,4 +709,4 @@ const Party = () => {
     );
 };
 
-export default Party;
+export default BrickParty;

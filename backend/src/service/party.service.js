@@ -1,6 +1,7 @@
 const partyRepository = require("../repository/party.repository");
 const headMasterRepository = require("../repository/headMaster.repository");
 const tHeadMasterRepository = require("../repository/tHeadMaster.repository");
+const stockItemRepository = require("../repository/stockItem.repository");
 
 const createError = (message, statusCode = 400) => {
     const error = new Error(message);
@@ -27,6 +28,15 @@ const validateParty = (body) => {
     ) {
         throw createError("sid1 must be a valid t_head_master id");
     }
+
+    if (
+        body.brick_type !== undefined &&
+        body.brick_type !== null &&
+        body.brick_type !== "" &&
+        Number.isNaN(Number(body.brick_type))
+    ) {
+        throw createError("brick_type must be a valid stock_item id");
+    }
 };
 
 const validatePartyRelations = async (body, userId) => {
@@ -36,14 +46,22 @@ const validatePartyRelations = async (body, userId) => {
         throw createError("Selected head master does not exist", 404);
     }
 
-    if (body.sid1 === undefined || body.sid1 === null || body.sid1 === "") {
+    if (body.sid1 !== undefined && body.sid1 !== null && body.sid1 !== "") {
+        const tHeadMaster = await tHeadMasterRepository.findById(body.sid1, userId);
+
+        if (!tHeadMaster) {
+            throw createError("Selected t head master does not exist", 404);
+        }
+    }
+
+    if (body.brick_type === undefined || body.brick_type === null || body.brick_type === "") {
         return;
     }
 
-    const tHeadMaster = await tHeadMasterRepository.findById(body.sid1, userId);
+    const stockItem = await stockItemRepository.findById(body.brick_type, userId);
 
-    if (!tHeadMaster) {
-        throw createError("Selected t head master does not exist", 404);
+    if (!stockItem) {
+        throw createError("Selected brick type does not exist", 404);
     }
 };
 

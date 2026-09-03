@@ -140,6 +140,25 @@ const addColumnIfMissing = async (tableName, columnName, definition) => {
     await db.query(`ALTER TABLE \`${tableName}\` ADD COLUMN ${definition}`);
 };
 
+const addIndexIfMissing = async (tableName, indexName, definition) => {
+    const [indexes] = await db.query(
+        `
+            SELECT INDEX_NAME
+            FROM INFORMATION_SCHEMA.STATISTICS
+            WHERE TABLE_SCHEMA = DATABASE()
+                AND TABLE_NAME = ?
+                AND INDEX_NAME = ?
+        `,
+        [tableName, indexName]
+    );
+
+    if (indexes.length > 0) {
+        return;
+    }
+
+    await db.query(`ALTER TABLE \`${tableName}\` ADD INDEX \`${indexName}\` ${definition}`);
+};
+
 const syncBillColumns = async () => {
     await addColumnIfMissing("bill", "cid", "`cid` INT(11) NULL DEFAULT NULL");
     await addColumnIfMissing("bill", "created_at", "`created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP");
@@ -157,9 +176,20 @@ const syncStockItemColumns = async () => {
     await addColumnIfMissing("stock_item", "measurement_data", "`measurement_data` VARCHAR(20) NULL DEFAULT NULL");
 };
 
+const syncPartyColumns = async () => {
+    await addColumnIfMissing("party", "gstno", "`gstno` VARCHAR(30) NULL DEFAULT NULL");
+    await addColumnIfMissing("party", "email_id", "`email_id` VARCHAR(100) NULL DEFAULT NULL");
+    await addColumnIfMissing("party", "brick_type", "`brick_type` INT(11) NULL DEFAULT NULL COMMENT 'relation with stock_item id'");
+    await addIndexIfMissing("party", "idx_party_brick_type", "(`brick_type`)");
+};
+
 const syncTranSalesColumns = async () => {
     await addColumnIfMissing("tran", "vehicle_no", "`vehicle_no` INT(11) NULL DEFAULT NULL");
+    await addColumnIfMissing("tran", "vehicle_text", "`vehicle_text` VARCHAR(50) NULL DEFAULT NULL");
     await addColumnIfMissing("tran", "slip_no", "`slip_no` VARCHAR(50) NULL DEFAULT NULL");
+    await addColumnIfMissing("tran", "cash", "`cash` VARCHAR(20) NULL DEFAULT NULL");
+    await addColumnIfMissing("tran", "cgst", "`cgst` VARCHAR(20) NULL DEFAULT NULL");
+    await addColumnIfMissing("tran", "igst", "`igst` VARCHAR(20) NULL DEFAULT NULL");
     await addColumnIfMissing("trande", "product_id", "`product_id` INT(11) NULL DEFAULT NULL");
     await addColumnIfMissing("trande", "rate", "`rate` VARCHAR(20) NULL DEFAULT NULL");
 };
@@ -228,6 +258,7 @@ const initTables = async () => {
     await syncBillColumns();
     await syncCustomerColumns();
     await syncStockItemColumns();
+    await syncPartyColumns();
     await syncTranSalesColumns();
     await syncMasterForeignKey();
 };
