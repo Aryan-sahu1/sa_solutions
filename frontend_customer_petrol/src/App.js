@@ -15,7 +15,7 @@ import ProtectedRoute from "./ProtectedRoute/ProtectedRoute";
 import ChangePassword from "./component/ChangePassword";
 // import Product from "./component/Product";
 import HeadMaster from "./component/HeadMaster";
-import Party from "./component/Party";
+import PartyRoute from "./component/PartyRoute";
 import ProductCategory from "./component/ProductCategory";
 import StockItem from "./component/StockItem";
 import StaffMember from "./component/StaffMember";
@@ -29,10 +29,13 @@ import BillGeneration from "./component/BillGeneration";
 import ProductPagePlaceholder from "./component/ProductPagePlaceholder";
 import { mergedProductRoutes } from "./config/productConfig";
 import Sales from "./component/Sales";
-import Purchase from "./component/Purchase";
+import PurchaseRoute from "./component/PurchaseRoute";
 import Nozel from "./component/Nozel";
 import Meter from "./component/Meter";
 import Reports from "./Reports/Reports";
+import BrickDelivery from "./brick/BrickDelivery";
+import BrickDumper from "./brick/BrickDumper";
+import BrickJcb from "./brick/BrickJcb";
 
 const implementedProductRoutes = new Set([
     "/dashboard",
@@ -46,6 +49,9 @@ const implementedProductRoutes = new Set([
     "/add-data",
     "/sale",
     "/purchase",
+    "/brick-delivery",
+    "/dumper-entry",
+    "/jcb-entry",
     "/voucher-entry",
     "/cash-receipt",
     "/cash-receipt-payment",
@@ -112,7 +118,7 @@ const App = () => {
 
                         <Route
                             path="/party"
-                            element={<Party />}
+                            element={<PartyRoute />}
                         />
 
                         <Route
@@ -155,7 +161,22 @@ const App = () => {
 
                         <Route
                             path="/purchase"
-                            element={<Purchase />}
+                            element={<PurchaseRoute />}
+                        />
+
+                        <Route
+                            path="/brick-delivery"
+                            element={<BrickDelivery />}
+                        />
+
+                        <Route
+                            path="/dumper-entry"
+                            element={<BrickDumper />}
+                        />
+
+                        <Route
+                            path="/jcb-entry"
+                            element={<BrickJcb />}
                         />
 
                         <Route

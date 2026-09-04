@@ -10,9 +10,12 @@ const create = async (body, userId) => {
             openbal,
             sid,
             sid1,
-            salary
+            salary,
+            gstno,
+            email_id,
+            brick_type
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const [result] = await db.query(sql, [
@@ -23,7 +26,10 @@ const create = async (body, userId) => {
         body.openbal,
         body.sid,
         body.sid1 || null,
-        body.salary || null
+        body.salary || null,
+        body.gstno || null,
+        body.email_id || null,
+        body.brick_type || null
     ]);
 
     return result;
@@ -43,12 +49,18 @@ const findAll = async ({ userId, page = 1, limit = 10, search = "" } = {}) => {
                 OR p.phone_no LIKE ?
                 OR p.openbal LIKE ?
                 OR p.salary LIKE ?
+                OR p.gstno LIKE ?
+                OR p.email_id LIKE ?
                 OR hm.name LIKE ?
                 OR thm.name LIKE ?
+                OR si.name LIKE ?
             )
         `;
         const searchTerm = `%${String(search).trim()}%`;
         params.push(
+            searchTerm,
+            searchTerm,
+            searchTerm,
             searchTerm,
             searchTerm,
             searchTerm,
@@ -70,12 +82,16 @@ const findAll = async ({ userId, page = 1, limit = 10, search = "" } = {}) => {
             p.sid,
             p.sid1,
             p.salary,
+            p.gstno,
+            p.email_id,
+            p.brick_type,
             p.created_at,
             p.updated_at,
             p.deleted_at,
             hm.name AS head_master_name,
             hm.head_type AS head_master_type,
-            thm.name AS t_head_master_name
+            thm.name AS t_head_master_name,
+            si.name AS brick_type_name
         FROM party p
         LEFT JOIN head_master hm
             ON hm.id = p.sid
@@ -84,6 +100,10 @@ const findAll = async ({ userId, page = 1, limit = 10, search = "" } = {}) => {
         LEFT JOIN t_head_master thm
             ON thm.id = p.sid1
             AND thm.deleted_at IS NULL
+        LEFT JOIN stock_item si
+            ON si.id = p.brick_type
+            AND si.cid = p.cid
+            AND si.deleted_at IS NULL
         ${where}
         ORDER BY p.id DESC
         LIMIT ? OFFSET ?
@@ -99,6 +119,10 @@ const findAll = async ({ userId, page = 1, limit = 10, search = "" } = {}) => {
         LEFT JOIN t_head_master thm
             ON thm.id = p.sid1
             AND thm.deleted_at IS NULL
+        LEFT JOIN stock_item si
+            ON si.id = p.brick_type
+            AND si.cid = p.cid
+            AND si.deleted_at IS NULL
         ${where}
     `;
 
@@ -137,12 +161,16 @@ const findById = async (id, userId) => {
             p.sid,
             p.sid1,
             p.salary,
+            p.gstno,
+            p.email_id,
+            p.brick_type,
             p.created_at,
             p.updated_at,
             p.deleted_at,
             hm.name AS head_master_name,
             hm.head_type AS head_master_type,
-            thm.name AS t_head_master_name
+            thm.name AS t_head_master_name,
+            si.name AS brick_type_name
         FROM party p
         LEFT JOIN head_master hm
             ON hm.id = p.sid
@@ -151,6 +179,10 @@ const findById = async (id, userId) => {
         LEFT JOIN t_head_master thm
             ON thm.id = p.sid1
             AND thm.deleted_at IS NULL
+        LEFT JOIN stock_item si
+            ON si.id = p.brick_type
+            AND si.cid = p.cid
+            AND si.deleted_at IS NULL
         WHERE p.id = ?
         AND p.cid = ?
         AND p.deleted_at IS NULL
@@ -173,6 +205,9 @@ const findByName = async (name, userId) => {
             p.sid,
             p.sid1,
             p.salary,
+            p.gstno,
+            p.email_id,
+            p.brick_type,
             p.created_at,
             p.updated_at,
             p.deleted_at
@@ -198,7 +233,10 @@ const update = async (id, body, userId) => {
             openbal = ?,
             sid = ?,
             sid1 = ?,
-            salary = ?
+            salary = ?,
+            gstno = ?,
+            email_id = ?,
+            brick_type = ?
         WHERE id = ?
         AND cid = ?
         AND deleted_at IS NULL
@@ -212,6 +250,9 @@ const update = async (id, body, userId) => {
         body.sid,
         body.sid1 || null,
         body.salary || null,
+        body.gstno || null,
+        body.email_id || null,
+        body.brick_type || null,
         id,
         userId
     ]);

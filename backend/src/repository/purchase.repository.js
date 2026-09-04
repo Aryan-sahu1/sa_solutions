@@ -21,21 +21,29 @@ const create = async (body, userId) => {
                     amt,
                     cid,
                     vehicle_no,
-                    slip_no
+                    slip_no,
+                    vehicle_text,
+                    cash,
+                    cgst,
+                    igst
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `,
             [
                 body.pid,
                 body.crid,
                 body.date,
                 PURCHASE_TYPE,
-                PURCHASE_TYPE1,
-                null,
+                body.type1 === undefined ? PURCHASE_TYPE1 : body.type1,
+                body.remarks || null,
                 body.amt,
                 userId,
-                body.vehicle_no,
-                body.slip_no
+                body.vehicle_no || null,
+                body.slip_no || null,
+                body.vehicle_text || null,
+                body.cash || null,
+                body.cgst || null,
+                body.igst || null
             ]
         );
 
@@ -69,10 +77,19 @@ const create = async (body, userId) => {
     }
 };
 
-const findAll = async ({ userId, page = 1, limit = 10, search = "", date = "" } = {}) => {
+const findAll = async ({ userId, page = 1, limit = 10, search = "", date = "", type1 } = {}) => {
     const offset = (page - 1) * limit;
     let where = `WHERE tr.deleted_at IS NULL AND tr.cid = ? AND tr.type = ?`;
     const params = [userId, PURCHASE_TYPE];
+
+    if (type1 !== undefined) {
+        if (type1 === null || type1 === "") {
+            where += ` AND tr.type1 IS NULL`;
+        } else {
+            where += ` AND tr.type1 = ?`;
+            params.push(type1);
+        }
+    }
 
     if (date && String(date).trim() !== "") {
         where += ` AND DATE(tr.date) = ?`;
@@ -109,15 +126,19 @@ const findAll = async ({ userId, page = 1, limit = 10, search = "", date = "" } 
             tr.date,
             tr.type,
             tr.type1,
-            tr.remarks,
-            tr.amt,
-            tr.cid,
-            tr.vehicle_no,
-            tr.slip_no,
-            tr.created_at,
-            tr.updated_at,
-            tr.deleted_at,
-            p.name AS party_name,
+                tr.remarks,
+                tr.amt,
+                tr.cid,
+                tr.vehicle_no,
+                tr.slip_no,
+                tr.vehicle_text,
+                tr.cash,
+                tr.cgst,
+                tr.igst,
+                tr.created_at,
+                tr.updated_at,
+                tr.deleted_at,
+                p.name AS party_name,
             vm.name AS vehicle_name,
             GROUP_CONCAT(DISTINCT detail_pc.name ORDER BY detail_pc.name SEPARATOR ', ') AS product_category_name
         FROM tran tr
@@ -238,6 +259,10 @@ const findById = async (id, userId) => {
                 tr.cid,
                 tr.vehicle_no,
                 tr.slip_no,
+                tr.vehicle_text,
+                tr.cash,
+                tr.cgst,
+                tr.igst,
                 p.name AS party_name,
                 vm.name AS vehicle_name
             FROM tran tr
@@ -311,7 +336,11 @@ const update = async (id, body, userId) => {
                     remarks = ?,
                     amt = ?,
                     vehicle_no = ?,
-                    slip_no = ?
+                    slip_no = ?,
+                    vehicle_text = ?,
+                    cash = ?,
+                    cgst = ?,
+                    igst = ?
                 WHERE id = ?
                 AND cid = ?
                 AND type = ?
@@ -321,11 +350,15 @@ const update = async (id, body, userId) => {
                 body.pid,
                 body.crid,
                 body.date,
-                PURCHASE_TYPE1,
-                null,
+                body.type1 === undefined ? PURCHASE_TYPE1 : body.type1,
+                body.remarks || null,
                 body.amt,
-                body.vehicle_no,
-                body.slip_no,
+                body.vehicle_no || null,
+                body.slip_no || null,
+                body.vehicle_text || null,
+                body.cash || null,
+                body.cgst || null,
+                body.igst || null,
                 id,
                 userId,
                 PURCHASE_TYPE
