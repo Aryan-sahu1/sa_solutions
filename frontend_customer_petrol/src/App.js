@@ -33,6 +33,9 @@ import PurchaseRoute from "./component/PurchaseRoute";
 import Nozel from "./component/Nozel";
 import Meter from "./component/Meter";
 import Reports from "./Reports/Reports";
+import BrickDelivery from "./brick/BrickDelivery";
+import BrickDumper from "./brick/BrickDumper";
+import BrickJcb from "./brick/BrickJcb";
 
 const implementedProductRoutes = new Set([
     "/dashboard",
@@ -46,6 +49,9 @@ const implementedProductRoutes = new Set([
     "/add-data",
     "/sale",
     "/purchase",
+    "/brick-delivery",
+    "/dumper-entry",
+    "/jcb-entry",
     "/voucher-entry",
     "/cash-receipt",
     "/cash-receipt-payment",
@@ -156,6 +162,21 @@ const App = () => {
                         <Route
                             path="/purchase"
                             element={<PurchaseRoute />}
+                        />
+
+                        <Route
+                            path="/brick-delivery"
+                            element={<BrickDelivery />}
+                        />
+
+                        <Route
+                            path="/dumper-entry"
+                            element={<BrickDumper />}
+                        />
+
+                        <Route
+                            path="/jcb-entry"
+                            element={<BrickJcb />}
                         />
 
                         <Route

@@ -159,6 +159,29 @@ const addIndexIfMissing = async (tableName, indexName, definition) => {
     await db.query(`ALTER TABLE \`${tableName}\` ADD INDEX \`${indexName}\` ${definition}`);
 };
 
+const renameColumnIfExists = async (tableName, oldColumnName, newColumnName, definition) => {
+    const [columns] = await db.query(
+        `
+            SELECT COLUMN_NAME
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+                AND TABLE_NAME = ?
+                AND COLUMN_NAME IN (?, ?)
+        `,
+        [tableName, oldColumnName, newColumnName]
+    );
+
+    const columnNames = columns.map((column) => column.COLUMN_NAME);
+
+    if (!columnNames.includes(oldColumnName) || columnNames.includes(newColumnName)) {
+        return;
+    }
+
+    await db.query(
+        `ALTER TABLE \`${tableName}\` CHANGE COLUMN \`${oldColumnName}\` ${definition}`
+    );
+};
+
 const syncBillColumns = async () => {
     await addColumnIfMissing("bill", "cid", "`cid` INT(11) NULL DEFAULT NULL");
     await addColumnIfMissing("bill", "created_at", "`created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP");
@@ -190,6 +213,24 @@ const syncTranSalesColumns = async () => {
     await addColumnIfMissing("tran", "cash", "`cash` VARCHAR(20) NULL DEFAULT NULL");
     await addColumnIfMissing("tran", "cgst", "`cgst` VARCHAR(20) NULL DEFAULT NULL");
     await addColumnIfMissing("tran", "igst", "`igst` VARCHAR(20) NULL DEFAULT NULL");
+    await addColumnIfMissing("tran", "start_time", "`start_time` VARCHAR(20) NULL DEFAULT NULL");
+    await addColumnIfMissing("tran", "end_time", "`end_time` VARCHAR(20) NULL DEFAULT NULL");
+    await addColumnIfMissing("tran", "total_time", "`total_time` VARCHAR(20) NULL DEFAULT NULL");
+    await addColumnIfMissing("tran", "round", "`round` VARCHAR(20) NULL DEFAULT NULL");
+    await addColumnIfMissing("tran", "rate", "`rate` VARCHAR(20) NULL DEFAULT NULL");
+    await addColumnIfMissing("tran", "iid", "`iid` INT(11) NULL DEFAULT NULL COMMENT 'relation with stock_item id'");
+    await addColumnIfMissing("tran", "qty", "`qty` VARCHAR(20) NULL DEFAULT NULL");
+    await renameColumnIfExists("tran", "vehicle_amount", "vamt", "`vamt` VARCHAR(20) NULL DEFAULT NULL");
+    await renameColumnIfExists("tran", "diesel_qty", "dqty", "`dqty` VARCHAR(20) NULL DEFAULT NULL");
+    await renameColumnIfExists("tran", "diesel_amount", "damt", "`damt` VARCHAR(20) NULL DEFAULT NULL");
+    await renameColumnIfExists("tran", "labour_amount", "lamt", "`lamt` VARCHAR(20) NULL DEFAULT NULL");
+    await renameColumnIfExists("tran", "signed_challan", "creturn", "`creturn` TINYINT(1) NOT NULL DEFAULT 0");
+    await addColumnIfMissing("tran", "vamt", "`vamt` VARCHAR(20) NULL DEFAULT NULL");
+    await addColumnIfMissing("tran", "dqty", "`dqty` VARCHAR(20) NULL DEFAULT NULL");
+    await addColumnIfMissing("tran", "damt", "`damt` VARCHAR(20) NULL DEFAULT NULL");
+    await addColumnIfMissing("tran", "lamt", "`lamt` VARCHAR(20) NULL DEFAULT NULL");
+    await addColumnIfMissing("tran", "creturn", "`creturn` TINYINT(1) NOT NULL DEFAULT 0");
+    await addIndexIfMissing("tran", "idx_tran_iid", "(`iid`)");
     await addColumnIfMissing("trande", "product_id", "`product_id` INT(11) NULL DEFAULT NULL");
     await addColumnIfMissing("trande", "rate", "`rate` VARCHAR(20) NULL DEFAULT NULL");
 };

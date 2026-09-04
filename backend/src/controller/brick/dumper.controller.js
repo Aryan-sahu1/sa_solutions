@@ -1,12 +1,12 @@
-const purchaseService = require("../service/purchase.service");
+const brickDumperService = require("../../service/brick/dumper.service");
 
 const create = async (req, res, next) => {
     try {
-        const result = await purchaseService.create(req.body, req.user.id);
+        const result = await brickDumperService.create(req.body, req.user.id);
 
         return res.status(201).json({
             status: true,
-            message: "Purchase entry created successfully",
+            message: "Dumper entry created successfully",
             data: result
         });
     } catch (error) {
@@ -16,7 +16,7 @@ const create = async (req, res, next) => {
 
 const findAll = async (req, res, next) => {
     try {
-        const result = await purchaseService.findAll({
+        const result = await brickDumperService.findAll({
             userId: req.user.id,
             page: Number(req.query.page) || 1,
             limit: Number(req.query.limit) || 10,
@@ -26,7 +26,7 @@ const findAll = async (req, res, next) => {
 
         return res.status(200).json({
             status: true,
-            message: "Purchase entries fetched successfully",
+            message: "Dumper entries fetched successfully",
             data: result.data,
             pagination: result.pagination
         });
@@ -37,11 +37,11 @@ const findAll = async (req, res, next) => {
 
 const findById = async (req, res, next) => {
     try {
-        const data = await purchaseService.findById(req.params.id, req.user.id);
+        const data = await brickDumperService.findById(req.params.id, req.user.id);
 
         return res.status(200).json({
             status: true,
-            message: "Purchase entry fetched successfully",
+            message: "Dumper entry fetched successfully",
             data
         });
     } catch (error) {
@@ -51,7 +51,7 @@ const findById = async (req, res, next) => {
 
 const update = async (req, res, next) => {
     try {
-        const data = await purchaseService.update(
+        const data = await brickDumperService.update(
             req.params.id,
             req.body,
             req.user.id
@@ -59,7 +59,7 @@ const update = async (req, res, next) => {
 
         return res.status(200).json({
             status: true,
-            message: "Purchase entry updated successfully",
+            message: "Dumper entry updated successfully",
             data
         });
     } catch (error) {
@@ -69,11 +69,11 @@ const update = async (req, res, next) => {
 
 const remove = async (req, res, next) => {
     try {
-        await purchaseService.remove(req.params.id, req.user.id);
+        await brickDumperService.remove(req.params.id, req.user.id);
 
         return res.status(200).json({
             status: true,
-            message: "Purchase entry deleted successfully"
+            message: "Dumper entry deleted successfully"
         });
     } catch (error) {
         next(error);

@@ -1,8 +1,8 @@
-const purchaseService = require("../service/purchase.service");
+const brickPurchaseService = require("../../service/brick/purchase.service");
 
 const create = async (req, res, next) => {
     try {
-        const result = await purchaseService.create(req.body, req.user.id);
+        const result = await brickPurchaseService.create(req.body, req.user.id);
 
         return res.status(201).json({
             status: true,
@@ -16,7 +16,7 @@ const create = async (req, res, next) => {
 
 const findAll = async (req, res, next) => {
     try {
-        const result = await purchaseService.findAll({
+        const result = await brickPurchaseService.findAll({
             userId: req.user.id,
             page: Number(req.query.page) || 1,
             limit: Number(req.query.limit) || 10,
@@ -37,7 +37,7 @@ const findAll = async (req, res, next) => {
 
 const findById = async (req, res, next) => {
     try {
-        const data = await purchaseService.findById(req.params.id, req.user.id);
+        const data = await brickPurchaseService.findById(req.params.id, req.user.id);
 
         return res.status(200).json({
             status: true,
@@ -51,7 +51,7 @@ const findById = async (req, res, next) => {
 
 const update = async (req, res, next) => {
     try {
-        const data = await purchaseService.update(
+        const data = await brickPurchaseService.update(
             req.params.id,
             req.body,
             req.user.id
@@ -69,7 +69,7 @@ const update = async (req, res, next) => {
 
 const remove = async (req, res, next) => {
     try {
-        await purchaseService.remove(req.params.id, req.user.id);
+        await brickPurchaseService.remove(req.params.id, req.user.id);
 
         return res.status(200).json({
             status: true,

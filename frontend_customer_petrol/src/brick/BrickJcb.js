@@ -8,15 +8,13 @@ const API_BASE_URL = "http://localhost:4000/api";
 
 const initialFormData = {
     date: "",
-    pid: "",
-    iid: "",
-    qty: "",
+    party_id: "",
+    start_time: "",
+    end_time: "",
+    total_time: "",
+    rate: "",
     amt: "",
     remarks: "",
-    vehicle_text: "",
-    cash: "",
-    cgst: "",
-    igst: "",
 };
 
 const toInputValue = (value) => {
@@ -46,11 +44,44 @@ const toDateInputValue = (value) => {
         .slice(0, 10);
 };
 
-const BrickPurchase = () => {
+const calculateTotalTime = (startTime, endTime) => {
+    if (!startTime || !endTime) return "";
+
+    const [startHour, startMinute] = startTime.split(":").map(Number);
+    const [endHour, endMinute] = endTime.split(":").map(Number);
+
+    if (
+        Number.isNaN(startHour) ||
+        Number.isNaN(startMinute) ||
+        Number.isNaN(endHour) ||
+        Number.isNaN(endMinute)
+    ) {
+        return "";
+    }
+
+    const startTotalMinutes = (startHour * 60) + startMinute;
+    let endTotalMinutes = (endHour * 60) + endMinute;
+
+    if (endTotalMinutes < startTotalMinutes) {
+        endTotalMinutes += 24 * 60;
+    }
+
+    return String((endTotalMinutes - startTotalMinutes) / 60);
+};
+
+const calculateAmount = (totalTime, rate) => {
+    const totalTimeValue = Number(totalTime);
+    const rateValue = Number(rate);
+
+    if (Number.isNaN(totalTimeValue) || Number.isNaN(rateValue)) return "";
+
+    return String(totalTimeValue * rateValue);
+};
+
+const BrickJcb = () => {
     const { authHeaders } = useAuth();
     const [entries, setEntries] = useState([]);
     const [parties, setParties] = useState([]);
-    const [stockItems, setStockItems] = useState([]);
     const [formData, setFormData] = useState(initialFormData);
     const [showForm, setShowForm] = useState(false);
     const [editId, setEditId] = useState(null);
@@ -71,9 +102,8 @@ const BrickPurchase = () => {
     const getDefaultFormData = useCallback(() => ({
         ...initialFormData,
         date: getCurrentDateValue(),
-        pid: toInputValue(parties[0]?.id),
-        iid: toInputValue(stockItems[0]?.id),
-    }), [parties, stockItems]);
+        party_id: toInputValue(parties[0]?.id),
+    }), [parties]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -98,7 +128,7 @@ const BrickPurchase = () => {
                 if (currentSearch) params.search = currentSearch;
                 if (currentDateFilter) params.date = currentDateFilter;
 
-                const response = await axios.get(`${API_BASE_URL}/brick-purchase`, {
+                const response = await axios.get(`${API_BASE_URL}/brick-jcb`, {
                     params,
                     headers: {
                         ...authHeaders,
@@ -115,12 +145,12 @@ const BrickPurchase = () => {
 
                 setEntries([]);
                 setTotalRecords(0);
-                setError(response.data.message || "No purchase entries found");
+                setError(response.data.message || "No JCB entries found");
             } catch (err) {
-                console.error("Brick purchase list error:", err);
+                console.error("JCB entry list error:", err);
                 setEntries([]);
                 setTotalRecords(0);
-                setError(err.response?.data?.message || "Failed to fetch purchase entries");
+                setError(err.response?.data?.message || "Failed to fetch JCB entries");
             } finally {
                 setListLoading(false);
             }
@@ -128,47 +158,33 @@ const BrickPurchase = () => {
         [authHeaders]
     );
 
-    const getOptions = useCallback(async () => {
+    const getParties = useCallback(async () => {
         if (!authHeaders.Authorization) return;
 
         try {
-            const [partyResult, stockResult] = await Promise.allSettled([
-                axios.get(`${API_BASE_URL}/party`, {
-                    params: { page: 1, limit: 1000 },
-                    headers: authHeaders,
-                }),
-                axios.get(`${API_BASE_URL}/stock-item`, {
-                    params: { page: 1, limit: 1000 },
-                    headers: authHeaders,
-                }),
-            ]);
+            const response = await axios.get(`${API_BASE_URL}/party`, {
+                params: { page: 1, limit: 1000 },
+                headers: authHeaders,
+            });
 
-            const nextParties =
-                partyResult.status === "fulfilled" && partyResult.value.data.status
-                    ? partyResult.value.data.data || []
-                    : [];
-            const nextStockItems =
-                stockResult.status === "fulfilled" && stockResult.value.data.status
-                    ? stockResult.value.data.data || []
-                    : [];
-
-            setParties(nextParties);
-            setStockItems(nextStockItems);
-            setFormData((current) => ({
-                ...current,
-                date: current.date || getCurrentDateValue(),
-                pid: current.pid || toInputValue(nextParties[0]?.id),
-                iid: current.iid || toInputValue(nextStockItems[0]?.id),
-            }));
+            if (response.data.status) {
+                const nextParties = response.data.data || [];
+                setParties(nextParties);
+                setFormData((current) => ({
+                    ...current,
+                    date: current.date || getCurrentDateValue(),
+                    party_id: current.party_id || toInputValue(nextParties[0]?.id),
+                }));
+            }
         } catch (err) {
-            console.error("Brick purchase option error:", err);
-            setError(err.response?.data?.message || "Failed to fetch purchase options");
+            console.error("JCB party option error:", err);
+            setError(err.response?.data?.message || "Failed to fetch party options");
         }
     }, [authHeaders]);
 
     useEffect(() => {
-        getOptions();
-    }, [getOptions]);
+        getParties();
+    }, [getParties]);
 
     useEffect(() => {
         getEntries(page, limit, debouncedSearch, dateFilter);
@@ -182,10 +198,26 @@ const BrickPurchase = () => {
     const handleChange = (e) => {
         const { name, value } = e.target;
 
-        setFormData((current) => ({
-            ...current,
-            [name]: value,
-        }));
+        setFormData((current) => {
+            const nextData = { ...current, [name]: value };
+
+            if (name === "start_time" || name === "end_time") {
+                nextData.total_time = calculateTotalTime(
+                    name === "start_time" ? value : nextData.start_time,
+                    name === "end_time" ? value : nextData.end_time
+                );
+                nextData.amt = calculateAmount(nextData.total_time, nextData.rate);
+            }
+
+            if (name === "total_time" || name === "rate") {
+                nextData.amt = calculateAmount(
+                    name === "total_time" ? value : nextData.total_time,
+                    name === "rate" ? value : nextData.rate
+                );
+            }
+
+            return nextData;
+        });
     };
 
     const handleAdd = () => {
@@ -203,9 +235,11 @@ const BrickPurchase = () => {
 
     const validateForm = () => {
         if (!formData.date) return "Date is required";
-        if (!formData.pid) return "Party is required";
-        if (!formData.iid) return "Stock item is required";
-        if (!formData.qty) return "Quantity is required";
+        if (!formData.party_id) return "Party is required";
+        if (!formData.start_time) return "Start time is required";
+        if (!formData.end_time) return "End time is required";
+        if (!formData.total_time) return "Total time is required";
+        if (!formData.rate) return "Rate is required";
         if (!formData.amt) return "Amount is required";
         return "";
     };
@@ -223,15 +257,13 @@ const BrickPurchase = () => {
 
         const payload = {
             date: toInputValue(formData.date).trim(),
-            pid: formData.pid,
-            iid: formData.iid,
-            qty: toInputValue(formData.qty).trim(),
+            party_id: formData.party_id,
+            start_time: toInputValue(formData.start_time).trim(),
+            end_time: toInputValue(formData.end_time).trim(),
+            total_time: toInputValue(formData.total_time).trim(),
+            rate: toInputValue(formData.rate).trim(),
             amt: toInputValue(formData.amt).trim(),
             remarks: toInputValue(formData.remarks).trim(),
-            vehicle_text: toInputValue(formData.vehicle_text).trim(),
-            cash: toInputValue(formData.cash).trim(),
-            cgst: toInputValue(formData.cgst).trim(),
-            igst: toInputValue(formData.igst).trim(),
         };
 
         try {
@@ -245,14 +277,15 @@ const BrickPurchase = () => {
             };
 
             const response = editId
-                ? await axios.put(`${API_BASE_URL}/brick-purchase/${editId}`, payload, config)
-                : await axios.post(`${API_BASE_URL}/brick-purchase`, payload, config);
+                ? await axios.put(`${API_BASE_URL}/brick-jcb/${editId}`, payload, config)
+                : await axios.post(`${API_BASE_URL}/brick-jcb`, payload, config);
 
             if (response.data.status) {
                 setMessage(
                     response.data.message ||
-                    (editId ? "Purchase entry updated successfully" : "Purchase entry saved successfully")
+                    (editId ? "JCB entry updated successfully" : "JCB entry saved successfully")
                 );
+
                 resetForm();
                 setShowForm(false);
                 setPage(1);
@@ -260,10 +293,10 @@ const BrickPurchase = () => {
                 return;
             }
 
-            setError(response.data.message || "Failed to save purchase entry");
+            setError(response.data.message || "Failed to save JCB entry");
         } catch (err) {
-            console.error("Save brick purchase error:", err);
-            setError(err.response?.data?.message || "Failed to save purchase entry");
+            console.error("Save JCB entry error:", err);
+            setError(err.response?.data?.message || "Failed to save JCB entry");
         } finally {
             setLoading(false);
         }
@@ -273,15 +306,13 @@ const BrickPurchase = () => {
         setEditId(entry.id);
         setFormData({
             date: toDateInputValue(entry.date),
-            pid: toInputValue(entry.crid || entry.pid),
-            iid: toInputValue(entry.iid),
-            qty: toInputValue(entry.qty),
+            party_id: toInputValue(entry.crid),
+            start_time: toInputValue(entry.start_time),
+            end_time: toInputValue(entry.end_time),
+            total_time: toInputValue(entry.total_time),
+            rate: toInputValue(entry.rate),
             amt: toInputValue(entry.amt),
             remarks: toInputValue(entry.remarks),
-            vehicle_text: toInputValue(entry.vehicle_text),
-            cash: toInputValue(entry.cash),
-            cgst: toInputValue(entry.cgst),
-            igst: toInputValue(entry.igst),
         });
         setShowForm(true);
         setMessage("");
@@ -295,7 +326,7 @@ const BrickPurchase = () => {
 
     const handleDelete = async (id) => {
         const confirmDelete = window.confirm(
-            "Are you sure you want to delete this purchase entry?"
+            "Are you sure you want to delete this JCB entry?"
         );
 
         if (!confirmDelete) return;
@@ -304,12 +335,12 @@ const BrickPurchase = () => {
             setMessage("");
             setError("");
 
-            const response = await axios.delete(`${API_BASE_URL}/brick-purchase/${id}`, {
+            const response = await axios.delete(`${API_BASE_URL}/brick-jcb/${id}`, {
                 headers: authHeaders,
             });
 
             if (response.data.status) {
-                setMessage(response.data.message || "Purchase entry deleted successfully");
+                setMessage(response.data.message || "JCB entry deleted successfully");
 
                 if (editId === id) {
                     resetForm();
@@ -320,10 +351,10 @@ const BrickPurchase = () => {
                 return;
             }
 
-            setError(response.data.message || "Failed to delete purchase entry");
+            setError(response.data.message || "Failed to delete JCB entry");
         } catch (err) {
-            console.error("Delete brick purchase error:", err);
-            setError(err.response?.data?.message || "Failed to delete purchase entry");
+            console.error("Delete JCB entry error:", err);
+            setError(err.response?.data?.message || "Failed to delete JCB entry");
         }
     };
 
@@ -337,12 +368,6 @@ const BrickPurchase = () => {
     };
 
     const dateBodyTemplate = (row) => toDateInputValue(row.date);
-
-    const stockItemBodyTemplate = (row) => row.stock_item_name || "-";
-
-    const quantityBodyTemplate = (row) => row.qty || "-";
-
-    const vehicleBodyTemplate = (row) => row.vehicle_text || "-";
 
     const actionBodyTemplate = (row) => {
         return (
@@ -369,9 +394,9 @@ const BrickPurchase = () => {
         <div className="container-fluid p-4">
             <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
                 <div>
-                    <h2 className="fw-bold mb-1">Brick Purchase</h2>
+                    <h2 className="fw-bold mb-1">JCB Entry</h2>
                     <p className="text-muted mb-0">
-                        Create and manage brick purchase entries
+                        Create and manage JCB entries
                     </p>
                 </div>
 
@@ -387,7 +412,7 @@ const BrickPurchase = () => {
                         handleAdd();
                     }}
                 >
-                    {showForm ? "Close" : "+ Add Purchase"}
+                    {showForm ? "Close" : "+ Add JCB Entry"}
                 </button>
             </div>
 
@@ -407,7 +432,7 @@ const BrickPurchase = () => {
                 <div className="card shadow-sm border-0 mb-4">
                     <div className="card-header bg-white">
                         <h5 className="mb-0">
-                            {editId ? "Edit Purchase" : "Add Purchase"}
+                            {editId ? "Edit JCB Entry" : "Add JCB Entry"}
                         </h5>
                     </div>
 
@@ -429,8 +454,8 @@ const BrickPurchase = () => {
                                     <label className="form-label fw-semibold">Party</label>
                                     <select
                                         className="form-select"
-                                        name="pid"
-                                        value={formData.pid}
+                                        name="party_id"
+                                        value={formData.party_id}
                                         onChange={handleChange}
                                     >
                                         {parties.map((party) => (
@@ -441,42 +466,50 @@ const BrickPurchase = () => {
                                     </select>
                                 </div>
 
-                                <div className="col-md-3">
-                                    <label className="form-label fw-semibold">Stock Item</label>
-                                    <select
-                                        className="form-select"
-                                        name="iid"
-                                        value={formData.iid}
+                                <div className="col-md-2">
+                                    <label className="form-label fw-semibold">Start Time</label>
+                                    <input
+                                        type="time"
+                                        className="form-control"
+                                        name="start_time"
+                                        value={formData.start_time}
                                         onChange={handleChange}
-                                    >
-                                        {stockItems.map((item) => (
-                                            <option key={item.id} value={item.id}>
-                                                {item.name}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    />
                                 </div>
 
-                                <div className="col-md-3">
-                                    <label className="form-label fw-semibold">Vehicle Number</label>
+                                <div className="col-md-2">
+                                    <label className="form-label fw-semibold">End Time</label>
                                     <input
-                                        type="text"
+                                        type="time"
                                         className="form-control"
-                                        name="vehicle_text"
-                                        placeholder="Enter vehicle number"
-                                        value={formData.vehicle_text}
+                                        name="end_time"
+                                        value={formData.end_time}
+                                        onChange={handleChange}
+                                    />
+                                </div>
+
+                                <div className="col-md-2">
+                                    <label className="form-label fw-semibold">Total Time</label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        className="form-control"
+                                        name="total_time"
+                                        placeholder="Hours"
+                                        value={formData.total_time}
                                         onChange={handleChange}
                                     />
                                 </div>
 
                                 <div className="col-md-3">
-                                    <label className="form-label fw-semibold">Quantity</label>
+                                    <label className="form-label fw-semibold">Rate</label>
                                     <input
                                         type="number"
+                                        step="0.01"
                                         className="form-control"
-                                        name="qty"
-                                        placeholder="Enter quantity"
-                                        value={formData.qty}
+                                        name="rate"
+                                        placeholder="Rate"
+                                        value={formData.rate}
                                         onChange={handleChange}
                                     />
                                 </div>
@@ -488,47 +521,8 @@ const BrickPurchase = () => {
                                         step="0.01"
                                         className="form-control"
                                         name="amt"
-                                        placeholder="Enter amount"
+                                        placeholder="Amount"
                                         value={formData.amt}
-                                        onChange={handleChange}
-                                    />
-                                </div>
-
-                                <div className="col-md-2">
-                                    <label className="form-label fw-semibold">Cash</label>
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        className="form-control"
-                                        name="cash"
-                                        placeholder="Cash"
-                                        value={formData.cash}
-                                        onChange={handleChange}
-                                    />
-                                </div>
-
-                                <div className="col-md-2">
-                                    <label className="form-label fw-semibold">CGST</label>
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        className="form-control"
-                                        name="cgst"
-                                        placeholder="CGST"
-                                        value={formData.cgst}
-                                        onChange={handleChange}
-                                    />
-                                </div>
-
-                                <div className="col-md-2">
-                                    <label className="form-label fw-semibold">IGST</label>
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        className="form-control"
-                                        name="igst"
-                                        placeholder="IGST"
-                                        value={formData.igst}
                                         onChange={handleChange}
                                     />
                                 </div>
@@ -554,8 +548,8 @@ const BrickPurchase = () => {
                                         {loading
                                             ? "Saving..."
                                             : editId
-                                                ? "Update Purchase"
-                                                : "Save Purchase"}
+                                                ? "Update Entry"
+                                                : "Save Entry"}
                                     </button>
 
                                     <button
@@ -576,7 +570,7 @@ const BrickPurchase = () => {
                 <div className="card-header bg-white p-3">
                     <div className="row align-items-center">
                         <div className="col-md-5">
-                            <h5 className="mb-0">Brick Purchase List</h5>
+                            <h5 className="mb-0">JCB Entry List</h5>
                         </div>
 
                         <div className="col-md-7 mt-3 mt-md-0">
@@ -585,7 +579,7 @@ const BrickPurchase = () => {
                                     <input
                                         type="text"
                                         className="form-control"
-                                        placeholder="Search purchase..."
+                                        placeholder="Search JCB entry..."
                                         value={search}
                                         onChange={(e) => setSearch(e.target.value)}
                                     />
@@ -618,23 +612,21 @@ const BrickPurchase = () => {
                         rowsPerPageOptions={[5, 10, 20, 50]}
                         onPage={handlePageChange}
                         responsiveLayout="scroll"
-                        tableStyle={{ minWidth: "72rem" }}
-                        emptyMessage={debouncedSearch ? "No purchase found for this search" : "No purchase found"}
+                        tableStyle={{ minWidth: "66rem" }}
+                        emptyMessage={debouncedSearch ? "No JCB entries found for this search" : "No JCB entries found"}
                         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown"
-                        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} purchase"
+                        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} JCB entries"
                         showCurrentPageReport
                     >
                         <Column header="#" body={serialNumberTemplate} style={{ width: "80px" }} />
                         <Column header="Date" body={dateBodyTemplate} />
                         <Column field="party_name" header="Party" />
-                        <Column header="Stock Item" body={stockItemBodyTemplate} />
-                        <Column header="Quantity" body={quantityBodyTemplate} />
+                        <Column field="start_time" header="Start Time" />
+                        <Column field="end_time" header="End Time" />
+                        <Column field="total_time" header="Total Time" />
+                        <Column field="rate" header="Rate" />
                         <Column field="amt" header="Amount" />
                         <Column field="remarks" header="Remarks" />
-                        <Column header="Vehicle Number" body={vehicleBodyTemplate} />
-                        <Column field="cash" header="Cash" />
-                        <Column field="cgst" header="CGST" />
-                        <Column field="igst" header="IGST" />
                         <Column header="Action" body={actionBodyTemplate} style={{ width: "180px" }} />
                     </DataTable>
                 </div>
@@ -643,4 +635,4 @@ const BrickPurchase = () => {
     );
 };
 
-export default BrickPurchase;
+export default BrickJcb;
