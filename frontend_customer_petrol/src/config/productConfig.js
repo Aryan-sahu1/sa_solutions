@@ -147,7 +147,8 @@ const bricksMenuItems = [
         label: "Master",
         icon: <FaLayerGroup />,
         children: [
-            { to: "/customer", label: "Customer", icon: <FaUsers /> },
+            { to: "/party", label: "Customer", icon: <FaUsers /> },
+            { to: "/product-category", label: "Product Category", icon: <FaBoxOpen /> },
             { to: "/stock-item", label: "Stock Item", icon: <FaBoxOpen /> },
             { to: "/head-master", label: "Head Master", icon: <FaBook /> },
             { to: "/vehicle-master", label: "Vehicle", icon: <FaTruck /> },

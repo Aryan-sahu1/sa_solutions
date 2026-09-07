@@ -139,7 +139,8 @@ const findAll = async (options = {}) => {
         page,
         limit,
         search: options.search || "",
-        date: options.date || ""
+        date: options.date || "",
+        type1: null
     });
 };
 

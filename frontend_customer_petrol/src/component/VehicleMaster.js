@@ -5,7 +5,7 @@ import { Column } from "primereact/column";
 import { useAuth } from "../context/AuthContext";
 
 const initialFormData = {
-    name: "", 
+    vehicle_no: "",
     balance: "",
 };
 
@@ -191,12 +191,10 @@ const VehicleMaster = () => {
         setError("");
 
         const payload = {
-            name: toInputValue(formData.vehicle_no).trim(), 
+            name: toInputValue(formData.vehicle_no).trim(),
             balance: toInputValue(formData.balance).trim(),
             sid: selectedPartyId,
         };
-
-        console.log(payload,"lllll")
 
         if (!payload.name) {
             setError("Vehicle no is required");
@@ -264,8 +262,8 @@ const VehicleMaster = () => {
 
     const handleEdit = (vehicle) => {
         setEditId(vehicle.id);
-        setFormData({ 
-            vehicle_no: toInputValue(vehicle.vehicle_no || vehicle.vehicleNo),
+        setFormData({
+            vehicle_no: toInputValue(vehicle.name || vehicle.vehicle_no || vehicle.vehicleNo),
             balance: toInputValue(vehicle.balance),
         });
         setSelectedPartyId(toInputValue(vehicle.sid));
@@ -505,7 +503,7 @@ const VehicleMaster = () => {
                         rowsPerPageOptions={[5, 10, 20, 50]}
                         onPage={handlePageChange}
                         responsiveLayout="scroll"
-                        tableStyle={{ minWidth: "500px" }, { maxWidth: "500px" }}
+                        tableStyle={{ minWidth: "500px", maxWidth: "500px" }}
                         emptyMessage={
                             debouncedSearch
                                 ? "No vehicles found for this search"
