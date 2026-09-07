@@ -36,6 +36,8 @@ import Reports from "./Reports/Reports";
 import BrickDelivery from "./brick/BrickDelivery";
 import BrickDumper from "./brick/BrickDumper";
 import BrickJcb from "./brick/BrickJcb";
+import Students from "./school/Students";
+import SchoolMaster from "./school/SchoolMaster";
 
 const implementedProductRoutes = new Set([
     "/dashboard",
@@ -60,6 +62,8 @@ const implementedProductRoutes = new Set([
     "/leak",
     "/nozel",
     "/meter",
+    "/students",
+    "/master",
 ]);
 
 const placeholderRoutes = mergedProductRoutes.filter(
@@ -188,6 +192,17 @@ const App = () => {
                             path="/meter"
                             element={<Meter />}
                         />
+
+                        <Route
+                            path="/students"
+                            element={<Students />}
+                        />
+
+                        <Route
+                            path="/master"
+                            element={<SchoolMaster />}
+                        />
+
                         <Route
                             path="/reports"
                             element={<Reports />}

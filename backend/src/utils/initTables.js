@@ -121,6 +121,65 @@ const initBillTable = async () => {
     await db.query(sql);
 };
 
+const initSchoolStudentTable = async () => {
+    const sql = `
+        CREATE TABLE IF NOT EXISTS school_student (
+            id INT(11) NOT NULL AUTO_INCREMENT,
+            name VARCHAR(255) NOT NULL,
+            address VARCHAR(255) NULL DEFAULT NULL,
+            father_name VARCHAR(255) NULL DEFAULT NULL,
+            mother_name VARCHAR(255) NULL DEFAULT NULL,
+            opening_balance VARCHAR(20) NULL DEFAULT NULL,
+            mobile VARCHAR(20) NULL DEFAULT NULL,
+            gender VARCHAR(20) NULL DEFAULT NULL,
+            discount VARCHAR(20) NULL DEFAULT NULL,
+            class_name VARCHAR(50) NULL DEFAULT NULL,
+            second_mobile_no VARCHAR(20) NULL DEFAULT NULL,
+            admission_no VARCHAR(50) NULL DEFAULT NULL,
+            fee_type VARCHAR(30) NULL DEFAULT NULL,
+            category VARCHAR(80) NULL DEFAULT NULL,
+            left_date DATE NULL DEFAULT NULL,
+            dob DATE NULL DEFAULT NULL,
+            admission_date DATE NULL DEFAULT NULL,
+            convenience_start_date DATE NULL DEFAULT NULL,
+            aadhar_no VARCHAR(20) NULL DEFAULT NULL,
+            house VARCHAR(80) NULL DEFAULT NULL,
+            sr_no VARCHAR(50) NULL DEFAULT NULL,
+            pan_no VARCHAR(20) NULL DEFAULT NULL,
+            cid INT(11) NOT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            deleted_at TIMESTAMP NULL DEFAULT NULL,
+            PRIMARY KEY (id),
+            INDEX idx_school_student_cid_deleted (cid, deleted_at),
+            INDEX idx_school_student_admission_no (admission_no),
+            INDEX idx_school_student_class_name (class_name)
+        )
+    `;
+
+    await db.query(sql);
+};
+
+const initSchoolMasterTable = async () => {
+    const sql = `
+        CREATE TABLE IF NOT EXISTS masterc (
+            id INT(11) NOT NULL AUTO_INCREMENT,
+            mid INT(11) NOT NULL COMMENT 'relation with master table',
+            name VARCHAR(255) NOT NULL,
+            amount VARCHAR(20) NOT NULL,
+            cid INT(11) NOT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            deleted_at TIMESTAMP NULL DEFAULT NULL,
+            PRIMARY KEY (id),
+            INDEX idx_masterc_cid_deleted (cid, deleted_at),
+            INDEX idx_masterc_mid (mid)
+        )
+    `;
+
+    await db.query(sql);
+};
+
 const addColumnIfMissing = async (tableName, columnName, definition) => {
     const [columns] = await db.query(
         `
@@ -296,6 +355,8 @@ const initTables = async () => {
     await initTranTable();
     await initTrandeTable();
     await initBillTable();
+    await initSchoolStudentTable();
+    await initSchoolMasterTable();
     await syncBillColumns();
     await syncCustomerColumns();
     await syncStockItemColumns();
